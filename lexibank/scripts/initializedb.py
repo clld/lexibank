@@ -31,7 +31,11 @@ def main(args):
                 'license_name': 'Creative Commons Attribution 4.0 International License'})
         DBSession.add(dataset)
 
-    for provider in ['abvd', 'ids']:
+    for provider in [
+        'transnewguinea',
+        'abvd',
+        'ids',
+    ]:
         import_cldf(os.path.join(datadir, provider, 'cldf'), provider)
 
     with transaction.manager:
