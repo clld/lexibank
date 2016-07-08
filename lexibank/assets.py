@@ -1,9 +1,9 @@
 from clld.web.assets import environment
-from path import path
+from clldutils.path import Path
 
 import lexibank
 
 
 environment.append_path(
-    path(lexibank.__file__).dirname().joinpath('static'), url='/lexibank:static/')
+    Path(lexibank.__file__).parent.joinpath('static').as_posix(), url='/lexibank:static/')
 environment.load_path = list(reversed(environment.load_path))

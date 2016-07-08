@@ -25,17 +25,22 @@ def uuid():
 
 
 @implementer(interfaces.IContribution)
-class Wordlist(CustomModelMixin, Contribution):
+class Provider(CustomModelMixin, Contribution):
     pk = Column(Integer, ForeignKey('contribution.pk'), primary_key=True)
-    language_pk = Column(Integer, ForeignKey('language.pk'))
-    language = relationship(Language, backref='wordlists')
+    language_count = Column(Integer)
+    parameter_count = Column(Integer)
+    lexeme_count = Column(Integer)
 
 
 @implementer(interfaces.IParameter)
 class Concept(CustomModelMixin, Parameter):
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
     representation = Column(Integer)
-    concepticon_url = Column(Unicode)
+    semanticfield = Column(Unicode)
+
+    @property
+    def concepticon_url(self):
+        return 'http://concepticon.clld.org/parameters/{0}'.format(self.id)
 
 
 @implementer(interfaces.ILanguage)

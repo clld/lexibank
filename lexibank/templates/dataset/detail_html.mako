@@ -15,12 +15,10 @@
     The lexicon of the world's languages.
 </p>
 <p>
-    Currently, LexiBank contains data from ABVD, the Bantu section of ABVD, transnewguinea.org
-    and IDS.
+    lexibank aggregates data from many <a href="${request.route_url('contributions')}">providers</a>.
 </p>
     <table class="table table-nonfluid">
         <tbody>
-            <tr><th>Wordlists</th><td></td><td class="right">${stats['contribution']}</td></tr>
             <tr><th>Lexical items</th><td></td><td class="right">${stats['value']}</td></tr>
             <tr><th>Concepts</th><td></td><td class="right">${stats['parameter']}</td></tr>
             <tr><th>Languages</th><td></td><td class="right">${stats['language']}</td></tr>

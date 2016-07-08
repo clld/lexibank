@@ -1,20 +1,24 @@
 from __future__ import unicode_literals
 import sys
-import os
 import transaction
+import os
 
 from clld.scripts.util import initializedb, Data
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld_glottologfamily_plugin.util import load_families
+from clldutils.path import Path
+from clldutils.jsonlib import load
+from pyglottolog.api import Glottolog
+from pyconcepticon.api import Concepticon
 
 import lexibank
 from lexibank.scripts.util import import_cldf
-from lexibank.models import LexibankLanguage, Concept
+from lexibank.models import LexibankLanguage, Concept, Provider
 
 
 def main(args):
-    datadir = '/home/robert/venvs/glottobank/lexibank'
+    repos = Path(os.path.expanduser('~')).joinpath('venvs/lexibank/lexibank-data')
 
     with transaction.manager:
         dataset = common.Dataset(
@@ -31,15 +35,28 @@ def main(args):
                 'license_name': 'Creative Commons Attribution 4.0 International License'})
         DBSession.add(dataset)
 
-    for provider in [
-        'transnewguinea',
-        'abvd',
-        'ids',
-    ]:
-        import_cldf(os.path.join(datadir, provider, 'cldf'), provider)
+    glottolog = Glottolog(
+        Path(lexibank.__file__).parent.parent.parent.parent.joinpath('glottolog3', 'glottolog'))
+    languoids = {l.id: l for l in glottolog.languoids()}
+    concepticon = Concepticon(
+        Path(lexibank.__file__).parent.parent.parent.parent.joinpath('concepticon', 'concepticon-data'))
+    conceptsets = {c['ID']: c for c in concepticon.conceptsets()}
+
+    for dname in repos.joinpath('datasets').iterdir():
+        if dname.is_dir() and dname.name != '_template':
+            #if dname.name != 'numerals':
+            #    continue
+            mdpath = dname.joinpath('metadata.json')
+            if mdpath.exists():
+                print(dname.name)
+                import_cldf(dname, load(mdpath), languoids, conceptsets)
 
     with transaction.manager:
-        load_families(Data(), DBSession.query(LexibankLanguage), isolates_icon='tcccccc')
+        load_families(
+            Data(),
+            DBSession.query(LexibankLanguage),
+            glottolog=languoids,
+            isolates_icon='tcccccc')
 
 
 def prime_cache(args):
@@ -48,8 +65,24 @@ def prime_cache(args):
     it will have to be run periodically whenever data has been updated.
     """
     for concept in DBSession.query(Concept):
-        concept.representation = DBSession.query(common.ValueSet)\
+        concept.representation = DBSession.query(common.Language)\
+            .join(common.ValueSet)\
             .filter(common.ValueSet.parameter_pk == concept.pk)\
+            .distinct()\
+            .count()
+
+    for prov in DBSession.query(Provider):
+        prov.language_count = DBSession.query(common.ValueSet.language_pk)\
+            .filter(common.ValueSet.contribution_pk == prov.pk)\
+            .distinct()\
+            .count()
+        prov.parameter_count = DBSession.query(common.ValueSet.parameter_pk) \
+            .filter(common.ValueSet.contribution_pk == prov.pk) \
+            .distinct() \
+            .count()
+        prov.lexeme_count = DBSession.query(common.Value.pk)\
+            .join(common.ValueSet)\
+            .filter(common.ValueSet.contribution_pk == prov.pk)\
             .count()
 
 
