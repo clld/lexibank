@@ -1,3 +1,6 @@
+# coding: utf-8
+from __future__ import unicode_literals
+
 from sqlalchemy.orm import aliased, joinedload
 
 from clld.db.meta import DBSession
