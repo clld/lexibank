@@ -5,14 +5,25 @@ from sqlalchemy import func, desc, text
 from clld_glottologfamily_plugin.models import Family
 from clld import RESOURCES
 from clld.db.meta import DBSession
+from clld.web.util.htmllib import HTML
 
 from lexibank.models import LexibankLanguage
 
 
+def concepticon_link(request, concept):
+    return HTML.a(
+        HTML.img(
+            src=request.static_url('lexibank:static/concepticon_logo.png'),
+            height=20,
+            width=30),
+        title='corresponding concept set at Concepticon',
+        href=concept.concepticon_url)
+
+
 def dataset_detail_html(context=None, request=None, **kw):
-    families = DBSession.query(Family.name, func.count(LexibankLanguage.id).label('c'))\
+    families = DBSession.query(Family.id, Family.name, func.count(LexibankLanguage.id).label('c'))\
         .join(LexibankLanguage)\
-        .group_by(Family.name)\
+        .group_by(Family.id, Family.name)\
         .order_by(desc(text('c')))
 
     return dict(

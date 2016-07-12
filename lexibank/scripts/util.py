@@ -1,25 +1,37 @@
 from __future__ import unicode_literals
 
-from nameparser import HumanName
 import transaction
 
-from clldutils.misc import slug
 from clld.db.meta import DBSession
-from clld.db.models.common import ValueSet, Language
+from clld.db.models.common import ValueSet
 from clld.scripts.util import Data
+from clld.lib.bibtex import EntryType, FIELDS
 from pycldf.dataset import Dataset
 from pycldf.util import MD_SUFFIX
 
-from lexibank.models import LexibankLanguage, Concept, Counterpart, Provider
+from lexibank.models import (
+    LexibankLanguage, Concept, Counterpart, Provider, CounterpartReference,
+    LexibankSource,
+)
 
 
-def import_dataset(ds, contrib, languoids, conceptsets):
-    #bibpath = os.path.join(dirpath, basename + '.bib')
-    #if os.path.exists(bibpath):
-    #    for rec in Database.from_file(bibpath):
-    #        if rec['key'] not in data['Source']:
-    #            data.add(Source, rec['key'], _obj=bibtex2source(rec))
+def cldf2clld(source, contrib, id_):
+    name = source.id
+    if source.get('author'):
+        name = source['author']
+    if source.get('year'):
+        name += ' %s' % source['year']
+    description = source.get('title')
+    return LexibankSource(
+        id='%s-%s' % (contrib.id, id_),
+        provider=contrib,
+        bibtex_type=getattr(EntryType, source.genre, EntryType.misc),
+        name=name,
+        description=description,
+        **{k: v for k, v in source.items() if k in FIELDS})
 
+
+def import_dataset(ds, contrib, languoids, conceptsets, sources):
     data = Data()
     concepts = {p.id: p for p in DBSession.query(Concept)}
     langs = {l.id: l for l in DBSession.query(LexibankLanguage)}
@@ -51,7 +63,7 @@ def import_dataset(ds, contrib, languoids, conceptsets):
                 id=row['Parameter_ID'], name=cs['GLOSS'], description=cs['DEFINITION'], semanticfield=cs['SEMANTICFIELD'])
 
         vsid = '%s-%s-%s' % (ds.name, language.id, concept.id)
-        vid = row['ID']
+        vid = '%s-%s' % (contrib.id, row['ID'])
 
         vs = data['ValueSet'].get(vsid)
         if vs is None:
@@ -78,9 +90,11 @@ def import_dataset(ds, contrib, languoids, conceptsets):
         #        cs = Cognateset(name=csid)
         #    counterpart.cognateset = cs
 
-        #for key, src in data['Source'].items():
-        #    if key in vs.source:
-        #        ValueSetReference(valueset=vs, source=src, key=key)
+        for ref in row.refs:
+            CounterpartReference(
+                counterpart=counterpart,
+                source=sources[ref.source.id],
+                description=ref.description)
 
 
 def import_cldf(srcdir, md, languoids, conceptsets):
@@ -90,7 +104,11 @@ def import_cldf(srcdir, md, languoids, conceptsets):
             name=md['dcterms:title'],
             description=md.get('dcterms:bibliographicCitation'))
         DBSession.add(contrib)
+        sources = {}
         cldfdir = srcdir.joinpath('cldf')
         for fname in cldfdir.glob('*' + MD_SUFFIX):
             ds = Dataset.from_file(cldfdir.joinpath(fname.name[:-len(MD_SUFFIX)]))
-            import_dataset(ds, contrib, languoids, conceptsets)
+            for src in ds.sources.items():
+                if src.id not in sources:
+                    sources[src.id] = cldf2clld(src, contrib, len(sources) + 1)
+            import_dataset(ds, contrib, languoids, conceptsets, sources)

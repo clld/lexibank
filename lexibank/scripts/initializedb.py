@@ -23,7 +23,7 @@ def main(args):
     with transaction.manager:
         dataset = common.Dataset(
             id=lexibank.__name__,
-            name="LexiBank",
+            name="lexibank",
             publisher_name="Max Planck Institute for the Science of Human History",
             publisher_place="Jena",
             publisher_url="http://shh.mpg.de",
@@ -44,7 +44,7 @@ def main(args):
 
     for dname in repos.joinpath('datasets').iterdir():
         if dname.is_dir() and dname.name != '_template':
-            #if dname.name != 'numerals':
+            #if dname.name != 'zenodo34092':
             #    continue
             mdpath = dname.joinpath('metadata.json')
             if mdpath.exists():

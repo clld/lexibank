@@ -13,7 +13,9 @@ from sqlalchemy.orm import relationship
 
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
-from clld.db.models.common import Language, Parameter, Contribution, Value
+from clld.db.models.common import (
+    Language, Parameter, Contribution, Value, HasSourceMixin, Source,
+)
 
 from clld_glottologfamily_plugin.models import HasFamilyMixin
 
@@ -48,6 +50,13 @@ class LexibankLanguage(CustomModelMixin, Language, HasFamilyMixin):
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
 
 
+@implementer(interfaces.ISource)
+class LexibankSource(CustomModelMixin, Source):
+    pk = Column(Integer, ForeignKey('source.pk'), primary_key=True)
+    provider_pk = Column(Integer, ForeignKey('provider.pk'))
+    provider = relationship(Provider, backref='sources')
+
+
 @implementer(ICognateset)
 class Cognateset(Base):
     id = Column(String, default=uuid, unique=True)
@@ -62,3 +71,8 @@ class Counterpart(CustomModelMixin, Value):
     cognateset_pk = Column(Integer, ForeignKey('cognateset.pk'))
     cognateset = relationship(Cognateset, backref='counterparts')
     loan = Column(Boolean, default=False)
+
+
+class CounterpartReference(Base, HasSourceMixin):
+    counterpart_pk = Column(Integer, ForeignKey('counterpart.pk'))
+    counterpart = relationship(Counterpart, backref="references")

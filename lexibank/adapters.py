@@ -39,6 +39,10 @@ limit 100
 
 
 class Colexifications(Representation):
+    """
+    Colexifications are pairs of concepts, lexified with the same lexeme in the same
+    language.
+    """
     name = 'colexifications'
     template = 'parameter/colexifications_html.mako'
     mimetype = 'application/vnd.clld.colexifications+html'

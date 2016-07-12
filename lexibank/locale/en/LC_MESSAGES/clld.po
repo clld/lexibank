@@ -27,11 +27,11 @@ msgstr "Concepts"
 
 #: lexibank/__init__.py:13
 msgid "Contribution"
-msgstr "Wordlist"
+msgstr "Dataset"
 
 #: lexibank/__init__.py:14
 msgid "Contributions"
-msgstr "Wordlists"
+msgstr "Datasets"
 
 #: lexibank/__init__.py:15
 msgid "Value"

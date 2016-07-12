@@ -1,1 +1,119 @@
 
+.color-primary-0 { color: #F05722 }	/* Main Primary color */
+.color-primary-1 { color: #FF9A77 }
+.color-primary-2 { color: #FE7B4E }
+.color-primary-3 { color: #C5390A }
+.color-primary-4 { color: #9C2800 }
+
+.color-secondary-1-0 { color: #1E6999 }	/* Main Secondary color (1) */
+.color-secondary-1-1 { color: #5D96BC }
+.color-secondary-1-2 { color: #3879A2 }
+.color-secondary-1-3 { color: #0D517E }
+.color-secondary-1-4 { color: #053F64 }
+
+.color-secondary-2-0 { color: #79D71F }	/* Main Secondary color (2) */
+.color-secondary-2-1 { color: #ABEC6E }
+.color-secondary-2-2 { color: #93E446 }
+.color-secondary-2-3 { color: #5BB109 }
+.color-secondary-2-4 { color: #448C00 }
+
+#contextnavbar .navbar-inner {
+        /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#006400+0,008e00+100 */
+        background: #5D96BC; /* Old browsers */
+        background: -moz-linear-gradient(top, rgba(56,121,162,0.82) 0%, rgba(93,150,188,0.94) 66%, rgba(56,121,162,1) 100%); /* FF3.6-15 */
+        background: -webkit-linear-gradient(top, rgba(56,121,162,0.82) 0%,rgba(93,150,188,0.94) 66%,rgba(56,121,162,1) 100%); /* Chrome10-25,Safari5.1-6 */
+        background: linear-gradient(to bottom, rgba(56,121,162,0.82) 0%,rgba(93,150,188,0.94) 66%,rgba(56,121,162,1) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+        filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#d13879a2', endColorstr='#3879a2',GradientType=0 );
+        color: white;
+        text-decoration-color: none;
+}
+#contextnavbar .navbar-static-top {
+        /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#006400+0,008e00+100 */
+        background: #5D96BC; /* Old browsers */
+        background: -moz-linear-gradient(top, rgba(56,121,162,0.82) 0%, rgba(93,150,188,0.94) 66%, rgba(56,121,162,1) 100%); /* FF3.6-15 */
+        background: -webkit-linear-gradient(top, rgba(56,121,162,0.82) 0%,rgba(93,150,188,0.94) 66%,rgba(56,121,162,1) 100%); /* Chrome10-25,Safari5.1-6 */
+        background: linear-gradient(to bottom, rgba(56,121,162,0.82) 0%,rgba(93,150,188,0.94) 66%,rgba(56,121,162,1) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+        filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#d13879a2', endColorstr='#3879a2',GradientType=0 );
+        color: white;
+}
+#contextnavbar .navbar-inner > .container-fluid {
+        /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#006400+0,008e00+100 */
+        background: #5D96BC; /* Old browsers */
+        background: -moz-linear-gradient(top, rgba(56,121,162,0.82) 0%, rgba(93,150,188,0.94) 66%, rgba(56,121,162,1) 100%); /* FF3.6-15 */
+        background: -webkit-linear-gradient(top, rgba(56,121,162,0.82) 0%,rgba(93,150,188,0.94) 66%,rgba(56,121,162,1) 100%); /* Chrome10-25,Safari5.1-6 */
+        background: linear-gradient(to bottom, rgba(56,121,162,0.82) 0%,rgba(93,150,188,0.94) 66%,rgba(56,121,162,1) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+        filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#d13879a2', endColorstr='#3879a2',GradientType=0 );
+        color: white;
+        text-decoration: none;
+}
+#top ul.nav li {
+        padding-top: 3px;
+}
+#top .nav > .active > a {
+        background-color: #eee;
+        text-shadow:none;
+        color: #F05722;
+        font-weight: bold;
+}
+#top .nav > .active > a:hover {
+        background-color: #eee;
+        text-shadow:none;
+        color: #F05722;
+        font-weight: bold;
+}
+#top .nav > li > a {
+        color: #F05722;
+        text-shadow: none;
+        font-weight: bold;
+}
+#top .nav > li > a:hover {
+        color: #F05722;
+        background-color: #eee;
+        text-shadow: none;
+        font-weight: bold;
+        text-decoration: underline;
+}
+
+#contextnavbar .nav > .active > a {
+        background-color: #eee;
+        text-shadow:none;
+        color: #F05722;
+        font-weight: bold;
+}
+#contextnavbar .nav > .active > a:hover {
+        background-color: #eee;
+        text-shadow:none;
+        color: #F05722;
+        font-weight: bold;
+}
+#contextnavbar .nav > li > a {
+        color: white;
+        text-shadow: none;
+        font-weight: bold;
+}
+#contextnavbar .nav > li > a:hover {
+        color: #F05722;
+        background-color: #eee;
+        text-shadow: none;
+        font-weight: bold;
+        text-decoration: underline;
+}
+
+a {
+        color: #053F64;
+        text-decoration: none;
+}
+a:hover {
+        color: #1E6999;
+        text-decoration: underline;
+}
+
+.btn-info {
+        background-color: #1E6999;
+        background-image: none;
+}
+.btn-info:hover {
+        background-color: #5D96BC;
+        background-image: none;
+}
+
