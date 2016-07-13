@@ -16,6 +16,10 @@
 
 <h2>${_('Value')} ${ctx.name}</h2>
 
+% if ctx.external_url:
+    <p>${h.external_link(ctx.external_url)}</p>
+% endif
+
 <table class="table table-nonfluid">
     <tr>
         <th>Language:</th>

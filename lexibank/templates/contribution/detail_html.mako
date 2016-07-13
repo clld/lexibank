@@ -4,8 +4,14 @@
 
 <h2>${_('Contribution')} ${ctx.name}</h2>
 
+<small>cite as</small>
 <blockquote>
     ${ctx.description}
 </blockquote>
+% if ctx.url:
+    <p>Available online at ${h.external_link(ctx.url)}</p>
+% endif
+
+<h3>Languages</h3>
 
 ${request.get_datatable('languages', h.models.Language, contribution=ctx) .render()}

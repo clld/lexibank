@@ -101,8 +101,12 @@ def import_cldf(srcdir, md, languoids, conceptsets):
     with transaction.manager:
         contrib = Provider(
             id=srcdir.name,
-            name=md['dcterms:title'],
-            description=md.get('dcterms:bibliographicCitation'))
+            name=md['dc:title'],
+            description=md.get('dc:bibliographicCitation'),
+            url=md.get('dc:identifier'),
+            license=md.get('dc:license'),
+            aboutUrl=md.get('aboutUrl'),
+        )
         DBSession.add(contrib)
         sources = {}
         cldfdir = srcdir.joinpath('cldf')

@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
 )
 from sqlalchemy.orm import relationship
+from uritemplate import expand
 
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
@@ -29,6 +30,9 @@ def uuid():
 @implementer(interfaces.IContribution)
 class Provider(CustomModelMixin, Contribution):
     pk = Column(Integer, ForeignKey('contribution.pk'), primary_key=True)
+    url = Column(Unicode)
+    license = Column(Unicode)
+    aboutUrl = Column(Unicode)
     language_count = Column(Integer)
     parameter_count = Column(Integer)
     lexeme_count = Column(Integer)
@@ -71,6 +75,13 @@ class Counterpart(CustomModelMixin, Value):
     cognateset_pk = Column(Integer, ForeignKey('cognateset.pk'))
     cognateset = relationship(Cognateset, backref='counterparts')
     loan = Column(Boolean, default=False)
+
+    @property
+    def external_url(self):
+        if self.valueset.contribution.aboutUrl:
+            return expand(
+                self.valueset.contribution.aboutUrl,
+                dict(ID=self.id.split('-', 1)[1]))
 
 
 class CounterpartReference(Base, HasSourceMixin):
