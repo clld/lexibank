@@ -191,7 +191,11 @@ class Providers(Contributions):
             Col(self, 'cite', model_col=Contribution.description),
             Col(self, 'language_count', sTitle='# languages', model_col=Provider.language_count),
             Col(self, 'parameter_count', sTitle='# concepts', model_col=Provider.parameter_count),
-            Col(self, 'lexeme_count', sTitle='# lexemes', model_col=Provider.lexeme_count),
+            Col(self,
+                'lexeme_count',
+                sTitle='# lexemes',
+                model_col=Provider.lexeme_count,
+                format=lambda i: '{:,}'.format(i.lexeme_count)),
         ]
 
 

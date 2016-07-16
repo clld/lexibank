@@ -14,4 +14,6 @@
 
 <h3>Languages</h3>
 
+${map.render()}
+
 ${request.get_datatable('languages', h.models.Language, contribution=ctx) .render()}
