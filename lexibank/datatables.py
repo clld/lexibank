@@ -5,14 +5,14 @@ from sqlalchemy.orm import aliased, joinedload, joinedload_all
 
 from clld.db.meta import DBSession
 from clld.db.util import get_distinct_values, icontains
-from clld.db.models.common import Value, Contribution, ValueSet
+from clld.db.models.common import Value, Contribution, ValueSet, Parameter, Language
 from clld.web.util.helpers import map_marker_img, external_link, linked_references
 from clld.web.util.htmllib import HTML
 
 from clld.web.datatables.base import Col, IdCol, LinkCol, LinkToMapCol
 from clld.web.datatables.language import Languages
 from clld.web.datatables.parameter import Parameters
-from clld.web.datatables.value import Values
+from clld.web.datatables.value import Values, ValueSetCol
 from clld.web.datatables.contribution import Contributions
 from clld.web.datatables.source import Sources
 
@@ -86,7 +86,13 @@ class Counterparts(Values):
             query = query.join(ValueSet.parameter)
             return query.filter(ValueSet.contribution_pk == self.contribution.pk)
 
-        return query
+        return query \
+            .join(ValueSet.parameter)\
+            .join(ValueSet.language)\
+            .options(
+                joinedload(Value.valueset, ValueSet.parameter),
+                joinedload(Value.valueset, ValueSet.language),
+            )
 
     def col_defs(self):
         if self.parameter:
@@ -102,7 +108,8 @@ class Counterparts(Values):
                     'family',
                     model_col=Family.name,
                     get_object=lambda i: i.valueset.language.family),
-                Col(self, 'loan', model_col=Counterpart.loan),
+                Col(self, 'variety', model_col=Counterpart.variety_name),
+                #Col(self, 'loan', model_col=Counterpart.loan),
                 RefsCol(self, 'source'),
             ]
         if self.language:
@@ -113,6 +120,7 @@ class Counterparts(Values):
                     'concept',
                     model_col=Concept.name,
                     get_object=lambda i: i.valueset.parameter),
+                Col(self, 'variety', model_col=Counterpart.variety_name),
                 LinkCol(
                     self,
                     'provider',
@@ -120,7 +128,20 @@ class Counterparts(Values):
                     get_object=lambda i: i.valueset.contribution),
                 RefsCol(self, 'source'),
             ]
-        return Values.col_defs(self)
+        return [
+            LinkCol(self, 'form', model_col=Value.name),
+            Col(self, 'context', model_col=Counterpart.context),
+            LinkCol(
+                self,
+                'language',
+                model_col=Language.name,
+                get_object=lambda i: i.valueset.language),
+            LinkCol(
+                self,
+                'concept',
+                model_col=Parameter.name,
+                get_object=lambda i: i.valueset.parameter),
+        ]
 
 
 #class FeatureIdCol(IdCol):

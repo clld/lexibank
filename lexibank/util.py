@@ -1,11 +1,12 @@
 # coding: utf8
-from __future__ import unicode_literals
+from __future__ import unicode_literals, division
 
 from sqlalchemy import func, desc, text
+from sqlalchemy.orm import joinedload
 from clld_glottologfamily_plugin.models import Family
 from clld import RESOURCES
 from clld.db.meta import DBSession
-from clld.db.models.common import Language, ValueSet
+from clld.db.models.common import Language
 from clld.web.util.htmllib import HTML
 from clld.web.maps import SelectedLanguagesMap
 
@@ -23,10 +24,10 @@ def concepticon_link(request, concept):
 
 
 def contribution_detail_html(context=None, request=None, **kw):
-    langs = DBSession.query(Language).join(Language.valuesets)\
-        .filter(ValueSet.contribution == context).distinct()
-    map_ = SelectedLanguagesMap(context, request, list(langs))
-    return {'map': map_}
+    langs = DBSession.query(Language)\
+        .filter(Language.pk.in_(context.jsondata['language_pks']))\
+        .options(joinedload(LexibankLanguage.family))
+    return {'map': SelectedLanguagesMap(context, request, list(langs))}
 
 
 def dataset_detail_html(context=None, request=None, **kw):

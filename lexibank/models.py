@@ -4,6 +4,7 @@ from zope.interface import implementer
 from sqlalchemy import (
     Column,
     Integer,
+    Float,
     Unicode,
     String,
     Boolean,
@@ -36,6 +37,7 @@ class Provider(CustomModelMixin, Contribution):
     language_count = Column(Integer)
     parameter_count = Column(Integer)
     lexeme_count = Column(Integer)
+    synonym_index = Column(Float, default=0.0)
 
 
 @implementer(interfaces.IParameter)
@@ -75,6 +77,8 @@ class Counterpart(CustomModelMixin, Value):
     cognateset_pk = Column(Integer, ForeignKey('cognateset.pk'))
     cognateset = relationship(Cognateset, backref='counterparts')
     loan = Column(Boolean, default=False)
+    variety_name = Column(Unicode)
+    context = Column(Unicode)
 
     @property
     def external_url(self):

@@ -80,6 +80,8 @@ def import_dataset(ds, contrib, languoids, conceptsets, sources):
             valueset=vs,
             name=row['Value'],
             description=row.get('Comment'),
+            context=row.get('Context'),
+            variety_name=row.get('Language_name'),
             #loan=row.get('Loan') == 'yes'
         )
 

@@ -1,11 +1,14 @@
-from __future__ import unicode_literals
+from __future__ import unicode_literals, division
 import sys
 import transaction
 import os
+from _collections import defaultdict
 
+from sqlalchemy import Index, func
 from clld.scripts.util import initializedb, Data
 from clld.db.meta import DBSession
 from clld.db.models import common
+from clld.db.util import collkey, with_collkey_ddl
 from clld_glottologfamily_plugin.util import load_families
 from clldutils.path import Path
 from clldutils.jsonlib import load
@@ -14,10 +17,14 @@ from pyconcepticon.api import Concepticon
 
 import lexibank
 from lexibank.scripts.util import import_cldf
-from lexibank.models import LexibankLanguage, Concept, Provider
+from lexibank.models import LexibankLanguage, Concept, Provider, Counterpart
+
+
+with_collkey_ddl()
 
 
 def main(args):
+    Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
     repos = Path(os.path.expanduser('~')).joinpath('venvs/lexibank/lexibank-data')
 
     with transaction.manager:
@@ -72,10 +79,12 @@ def prime_cache(args):
             .count()
 
     for prov in DBSession.query(Provider):
-        prov.language_count = DBSession.query(common.ValueSet.language_pk)\
+        q = DBSession.query(common.ValueSet.language_pk)\
             .filter(common.ValueSet.contribution_pk == prov.pk)\
-            .distinct()\
-            .count()
+            .distinct()
+        prov.language_count = q.count()
+        prov.update_jsondata(language_pks=[r[0] for r in q])
+
         prov.parameter_count = DBSession.query(common.ValueSet.parameter_pk) \
             .filter(common.ValueSet.contribution_pk == prov.pk) \
             .distinct() \
@@ -84,6 +93,30 @@ def prime_cache(args):
             .join(common.ValueSet)\
             .filter(common.ValueSet.contribution_pk == prov.pk)\
             .count()
+
+        syns = defaultdict(dict)
+        vs = common.ValueSet.__table__
+        cp = Counterpart.__table__
+        v = common.Value.__table__
+        for vn, lpk, ppk, count in DBSession.query(
+            cp.c.variety_name,
+            vs.c.language_pk,
+            vs.c.parameter_pk,
+            func.count(v.c.pk)) \
+            .filter(cp.c.pk == v.c.pk) \
+            .filter(v.c.valueset_pk == vs.c.pk) \
+            .filter(vs.c.contribution_pk == prov.pk) \
+            .group_by(
+            cp.c.variety_name,
+            vs.c.language_pk,
+            vs.c.parameter_pk
+        ):
+            syns[(vn, lpk)][ppk] = count
+
+        if syns:
+            prov.synonym_index = sum(
+                [sum(list(counts.values())) / len(counts)
+                 for counts in syns.values()]) / len(set(syns.keys()))
 
 
 if __name__ == '__main__':

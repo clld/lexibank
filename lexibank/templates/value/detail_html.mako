@@ -35,6 +35,12 @@
             <td>${h.linked_references(request, ctx)}</td>
         </tr>
     % endif
+    % if ctx.context:
+        <tr>
+            <th>Context:</th>
+            <td>${ctx.context}</td>
+        </tr>
+    % endif
     % if ctx.description:
         <tr>
             <th>Comment:</th>
