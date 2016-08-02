@@ -1,18 +1,17 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
-from sqlalchemy.orm import aliased, joinedload, joinedload_all
+from sqlalchemy.orm import joinedload, joinedload_all
 
 from clld.db.meta import DBSession
-from clld.db.util import get_distinct_values, icontains
+from clld.db.util import get_distinct_values
 from clld.db.models.common import Value, Contribution, ValueSet, Parameter, Language
-from clld.web.util.helpers import map_marker_img, external_link, linked_references
-from clld.web.util.htmllib import HTML
+from clld.web.util.helpers import external_link, linked_references
 
 from clld.web.datatables.base import Col, IdCol, LinkCol, LinkToMapCol
 from clld.web.datatables.language import Languages
 from clld.web.datatables.parameter import Parameters
-from clld.web.datatables.value import Values, ValueSetCol
+from clld.web.datatables.value import Values
 from clld.web.datatables.contribution import Contributions
 from clld.web.datatables.source import Sources
 
@@ -20,7 +19,7 @@ from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyLinkCol
 from clld_glottologfamily_plugin.models import Family
 
 from models import (
-    LexibankLanguage, Counterpart, Concept, Cognateset, Provider, LexibankSource,
+    LexibankLanguage, Counterpart, Concept, Provider, LexibankSource,
     CounterpartReference,
 )
 
@@ -76,7 +75,6 @@ class Counterparts(Values):
         if self.parameter:
             query = query \
                 .join(ValueSet.language) \
-                .outerjoin(Counterpart.cognateset) \
                 .outerjoin(LexibankLanguage.family) \
                 .options(joinedload_all(
                     Value.valueset, ValueSet.language, LexibankLanguage.family))
@@ -217,6 +215,11 @@ class Providers(Contributions):
                 sTitle='# lexemes',
                 model_col=Provider.lexeme_count,
                 format=lambda i: '{:,}'.format(i.lexeme_count)),
+            Col(self,
+                'synonymy',
+                sDescription=Provider.synonym_index.doc,
+                model_col=Provider.synonym_index,
+                format=lambda i: '{:.3f}'.format(i.synonym_index))
         ]
 
 

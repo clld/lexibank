@@ -22,7 +22,9 @@
         <td class="right">${'{0:,}'.format(ctx.lexeme_count)}</td>
     </tr>
     <tr>
-        <td>Synonymy index</td>
+        <td>
+            <span class="hint--bottom" data-hint="${ctx.__class__.__table__._columns['synonym_index'].doc}">Synonymy index</span>
+        </td>
         <td class="right">${'{0:.2f}'.format(ctx.synonym_index)}</td>
     </tr>
 </table>

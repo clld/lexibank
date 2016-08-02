@@ -1,14 +1,16 @@
 <%inherit file="../home_comp.mako"/>
+<%namespace name="util" file="../util.mako"/>
 
 <%def name="sidebar()">
     <img src="${request.static_url('lexibank:static/glottobank_all.jpg')}"/>
 
-    ##<div class="well">
-    ##   <h3>Sidebar</h3>
-    ##    <p>
-    ##        Content
-     ##   </p>
-    ##</div>
+    <%util:well title="lexibank data repository">
+        <a href="${req.resource_url(req.dataset)}" style="font-family: monospace">lexibank.clld.org</a>
+        serves the latest
+        ${h.external_link('https://github.com/glottobank/lexibank-data/releases', label='released version')}
+        of data curated at
+        ${h.external_link('https://github.com/glottobank/lexibank-data', label='glottobank/lexibank-data')}.
+    </%util:well>
 </%def>
 
 <h2>Welcome to lexibank</h2>
@@ -16,11 +18,13 @@
 <p class="lead">
     The lexicon of the world's languages.
 </p>
-<p>
-    lexibank aggregates data from many <a href="${request.route_url('contributions')}">providers</a>.
-</p>
     <table class="table table-nonfluid">
         <tbody>
+            <tr>
+                <th><a href="${request.route_url('contributions')}">Datasets</a></th>
+                <td class="right">${'{:,}'.format(stats['contribution'])}</td>
+                <td></td>
+            </tr>
             <tr>
                 <th>Lexical items</th>
                 <td class="right">${'{:,}'.format(stats['value'])}</td>
@@ -29,6 +33,11 @@
             <tr>
                 <th><a href="${request.route_url('parameters')}">Concepts</a></th>
                 <td class="right">${'{:,}'.format(stats['parameter'])}</td>
+                <td></td>
+            </tr>
+            <tr>
+                <th>Cognate sets</th>
+                <td class="right">${'{:,}'.format(stats['cognateset'])}</td>
                 <td></td>
             </tr>
             <tr>

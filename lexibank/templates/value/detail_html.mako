@@ -23,7 +23,7 @@
 <table class="table table-nonfluid">
     <tr>
         <th>Language:</th>
-        <td>${h.link(request, ctx.valueset.language)}</td>
+        <td>${h.link(request, ctx.valueset.language)} [${ctx.variety_name}]</td>
     </tr>
     <tr>
         <th>Parameter:</th>
@@ -48,3 +48,22 @@
         </tr>
     % endif
 </table>
+
+% if synonyms:
+    <h3>Synonyms</h3>
+    <dl>
+        % for prov, counterparts in synonyms:
+            <dt>${h.link(request, prov)}</dt>
+            <dd>
+                <ul>
+                    % for cp in counterparts:
+                        <li>
+                            ${h.link(request, cp)}
+                            [${cp.variety_name}]
+                        </li>
+                    % endfor
+                </ul>
+            </dd>
+        % endfor
+    </dl>
+% endif

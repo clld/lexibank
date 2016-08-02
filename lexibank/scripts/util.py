@@ -1,18 +1,24 @@
 from __future__ import unicode_literals
+from itertools import groupby
 
 import transaction
-
+from six import text_type
 from clld.db.meta import DBSession
 from clld.db.models.common import ValueSet
 from clld.scripts.util import Data
 from clld.lib.bibtex import EntryType, FIELDS
+from clldutils.dsv import reader
 from pycldf.dataset import Dataset
 from pycldf.util import MD_SUFFIX
 
 from lexibank.models import (
     LexibankLanguage, Concept, Counterpart, Provider, CounterpartReference,
-    LexibankSource,
+    LexibankSource, Cognateset, CognatesetCounterpart,
 )
+
+
+def unique_id(contrib, local_id):
+    return '%s-%s' % (contrib.id, local_id)
 
 
 def cldf2clld(source, contrib, id_):
@@ -23,7 +29,7 @@ def cldf2clld(source, contrib, id_):
         name += ' %s' % source['year']
     description = source.get('title')
     return LexibankSource(
-        id='%s-%s' % (contrib.id, id_),
+        id=unique_id(contrib, id_),
         provider=contrib,
         bibtex_type=getattr(EntryType, source.genre, EntryType.misc),
         name=name,
@@ -31,7 +37,7 @@ def cldf2clld(source, contrib, id_):
         **{k: v for k, v in source.items() if k in FIELDS})
 
 
-def import_dataset(ds, contrib, languoids, conceptsets, sources):
+def import_dataset(ds, contrib, languoids, conceptsets, sources, values):
     data = Data()
     concepts = {p.id: p for p in DBSession.query(Concept)}
     langs = {l.id: l for l in DBSession.query(LexibankLanguage)}
@@ -52,6 +58,7 @@ def import_dataset(ds, contrib, languoids, conceptsets, sources):
             langs[lid] = language = LexibankLanguage(
                 id=lid,
                 name=languoid.name,
+                level=text_type(languoid.level.name),
                 latitude=languoid.latitude,
                 longitude=languoid.longitude)
 
@@ -62,8 +69,8 @@ def import_dataset(ds, contrib, languoids, conceptsets, sources):
                 # FIXME: get gloss and description from concepticon!
                 id=row['Parameter_ID'], name=cs['GLOSS'], description=cs['DEFINITION'], semanticfield=cs['SEMANTICFIELD'])
 
-        vsid = '%s-%s-%s' % (ds.name, language.id, concept.id)
-        vid = '%s-%s' % (contrib.id, row['ID'])
+        vsid = unique_id(contrib, '%s-%s-%s' % (ds.name, language.id, concept.id))
+        vid = unique_id(contrib, row['ID'])
 
         vs = data['ValueSet'].get(vsid)
         if vs is None:
@@ -75,22 +82,16 @@ def import_dataset(ds, contrib, languoids, conceptsets, sources):
                 contribution=contrib,
                 source=None)  # FIXME: add sources!
 
-        counterpart = Counterpart(
+        counterpart = values.add(
+            Counterpart, row['ID'],
             id=vid,
             valueset=vs,
             name=row['Value'],
             description=row.get('Comment'),
             context=row.get('Context'),
             variety_name=row.get('Language_name'),
-            #loan=row.get('Loan') == 'yes'
+            loan=row.get('Loan', False),
         )
-
-        #if row.get('Cognate_Set'):
-        #    csid = row['Cognate_Set'].split(',')[0].strip()
-        #    cs = Cognateset.get(csid, key='name', default=None)
-        #    if cs is None:
-        #        cs = Cognateset(name=csid)
-        #    counterpart.cognateset = cs
 
         for ref in row.refs:
             CounterpartReference(
@@ -112,9 +113,23 @@ def import_cldf(srcdir, md, languoids, conceptsets):
         DBSession.add(contrib)
         sources = {}
         cldfdir = srcdir.joinpath('cldf')
+        values = Data()
         for fname in cldfdir.glob('*' + MD_SUFFIX):
-            ds = Dataset.from_file(cldfdir.joinpath(fname.name[:-len(MD_SUFFIX)]))
+            ds = Dataset.from_metadata(fname)
             for src in ds.sources.items():
                 if src.id not in sources:
                     sources[src.id] = cldf2clld(src, contrib, len(sources) + 1)
-            import_dataset(ds, contrib, languoids, conceptsets, sources)
+            import_dataset(ds, contrib, languoids, conceptsets, sources, values)
+        # import cognates:
+        if cldfdir.joinpath('cognates.csv').exists():
+            for csid, cognates in groupby(
+                    reader(cldfdir.joinpath('cognates.csv'), dicts=True),
+                    lambda i: i['Cognate_set_ID']):
+                cs = Cognateset(id=unique_id(contrib, csid))
+                for cognate in cognates:
+                    cp = values['Counterpart'].get(cognate['Word_ID'])
+                    if cp:
+                        DBSession.add(CognatesetCounterpart(
+                            cognateset=cs,
+                            counterpart=cp,
+                            doubt=cognate['doubt'] == 'True'))

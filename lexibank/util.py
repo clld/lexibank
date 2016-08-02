@@ -1,12 +1,13 @@
 # coding: utf8
 from __future__ import unicode_literals, division
+from itertools import groupby
 
 from sqlalchemy import func, desc, text
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, joinedload_all
 from clld_glottologfamily_plugin.models import Family
 from clld import RESOURCES
 from clld.db.meta import DBSession
-from clld.db.models.common import Language
+from clld.db.models.common import Language, Value, ValueSet
 from clld.web.util.htmllib import HTML
 from clld.web.maps import SelectedLanguagesMap
 
@@ -21,6 +22,18 @@ def concepticon_link(request, concept):
             width=30),
         title='corresponding concept set at Concepticon',
         href=concept.concepticon_url)
+
+
+def value_detail_html(context=None, request=None, **kw):
+    syns = DBSession.query(Value)\
+        .join(ValueSet) \
+        .filter(Value.pk != context.pk)\
+        .filter(ValueSet.parameter_pk == context.valueset.parameter_pk)\
+        .filter(ValueSet.language_pk == context.valueset.language_pk)\
+        .options(joinedload_all(Value.valueset, ValueSet.contribution))\
+        .order_by(ValueSet.contribution_pk)
+    return {'synonyms': [(c, list(cps)) for c, cps in
+                         groupby(syns, key=lambda v: v.valueset.contribution)]}
 
 
 def contribution_detail_html(context=None, request=None, **kw):
@@ -38,6 +51,5 @@ def dataset_detail_html(context=None, request=None, **kw):
 
     return dict(
         families=families,
-        stats=context.get_stats(
-            [rsc for rsc in RESOURCES
-             if rsc.name in ['language', 'family', 'contribution', 'value', 'parameter']]))
+        stats=context.get_stats([rsc for rsc in RESOURCES if rsc.name in [
+            'language', 'family', 'cognateset', 'contribution', 'value', 'parameter']]))

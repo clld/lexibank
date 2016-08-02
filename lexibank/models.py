@@ -37,7 +37,12 @@ class Provider(CustomModelMixin, Contribution):
     language_count = Column(Integer)
     parameter_count = Column(Integer)
     lexeme_count = Column(Integer)
-    synonym_index = Column(Float, default=0.0)
+    synonym_index = Column(
+        Float,
+        default=0.0,
+        doc="""A measure how often a dataset provides multiple synonyms for
+a concept in a language. 1 means for each concept in each language at most one counterpart
+is given.""")
 
 
 @implementer(interfaces.IParameter)
@@ -54,6 +59,7 @@ class Concept(CustomModelMixin, Parameter):
 @implementer(interfaces.ILanguage)
 class LexibankLanguage(CustomModelMixin, Language, HasFamilyMixin):
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
+    level = Column(Unicode)
 
 
 @implementer(interfaces.ISource)
@@ -66,16 +72,14 @@ class LexibankSource(CustomModelMixin, Source):
 @implementer(ICognateset)
 class Cognateset(Base):
     id = Column(String, default=uuid, unique=True)
-    name = Column(Unicode, unique=True)
-    # FIXME: are cognate sets concept-specific? If so, they should be related to the
-    # corresponding Concept.
+    type = Column(Unicode)  # automatic, ...
+    contribution_pk = Column(Integer, ForeignKey('contribution.pk'))
+    contribution = relationship(Contribution, backref='cognatesets')
 
 
 @implementer(interfaces.IValue)
 class Counterpart(CustomModelMixin, Value):
     pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
-    cognateset_pk = Column(Integer, ForeignKey('cognateset.pk'))
-    cognateset = relationship(Cognateset, backref='counterparts')
     loan = Column(Boolean, default=False)
     variety_name = Column(Unicode)
     context = Column(Unicode)
@@ -86,6 +90,14 @@ class Counterpart(CustomModelMixin, Value):
             return expand(
                 self.valueset.contribution.aboutUrl,
                 dict(ID=self.id.split('-', 1)[1]))
+
+
+class CognatesetCounterpart(Base):
+    cognateset_pk = Column(Integer, ForeignKey('cognateset.pk'))
+    cognateset = relationship(Cognateset, backref='counterparts')
+    counterpart_pk = Column(Integer, ForeignKey('counterpart.pk'))
+    counterpart = relationship(Counterpart, backref='cognatesets')
+    doubt = Column(Boolean, default=False)
 
 
 class CounterpartReference(Base, HasSourceMixin):
