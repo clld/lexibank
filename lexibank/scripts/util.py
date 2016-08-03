@@ -125,7 +125,7 @@ def import_cldf(srcdir, md, languoids, conceptsets):
             for csid, cognates in groupby(
                     reader(cldfdir.joinpath('cognates.csv'), dicts=True),
                     lambda i: i['Cognate_set_ID']):
-                cs = Cognateset(id=unique_id(contrib, csid))
+                cs = Cognateset(id=unique_id(contrib, csid), contribution=contrib)
                 for cognate in cognates:
                     cp = values['Counterpart'].get(cognate['Word_ID'])
                     if cp:

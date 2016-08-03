@@ -1,10 +1,10 @@
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, joinedload_all
 from pyramid.config import Configurator
 
 from clld_glottologfamily_plugin.util import LanguageByFamilyMapMarker
 from clld.interfaces import IValue, IValueSet, IMapMarker, ICtxFactoryQuery
 from clld.web.app import CtxFactoryQuery
-from clld.db.models.common import Contribution
+from clld.db.models.common import Contribution, ValueSet, Value
 
 # we must make sure custom models are known at database initialization!
 from lexibank import models
@@ -26,6 +26,21 @@ class LexibankCtxFactoryQuery(CtxFactoryQuery):
     def refined_query(self, query, model, req):
         if model == Contribution:
             query = query.options(joinedload(Contribution.data))
+        if model == models.Cognateset:
+            query = query.options(
+                joinedload_all(
+                    models.Cognateset.counterparts,
+                    models.CognatesetCounterpart.counterpart,
+                    Value.valueset,
+                    ValueSet.parameter,
+                ),
+                joinedload(
+                    models.Cognateset.counterparts,
+                    models.CognatesetCounterpart.counterpart,
+                    Value.valueset,
+                    ValueSet.language,
+                )
+            )
         return query
 
 
@@ -46,5 +61,5 @@ def main(global_config, **settings):
     config.include('clld_glottologfamily_plugin')
     config.registry.registerUtility(MyMapMarker(), IMapMarker)
     config.registry.registerUtility(LexibankCtxFactoryQuery(), ICtxFactoryQuery)
-    config.register_resource('cognateset', models.Cognateset, ICognateset)
+    config.register_resource('cognateset', models.Cognateset, ICognateset, with_index=True)
     return config.make_wsgi_app()

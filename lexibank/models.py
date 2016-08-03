@@ -72,9 +72,11 @@ class LexibankSource(CustomModelMixin, Source):
 @implementer(ICognateset)
 class Cognateset(Base):
     id = Column(String, default=uuid, unique=True)
+    name = Column(Unicode)
     type = Column(Unicode)  # automatic, ...
     contribution_pk = Column(Integer, ForeignKey('contribution.pk'))
     contribution = relationship(Contribution, backref='cognatesets')
+    representation = Column(Integer)
 
 
 @implementer(interfaces.IValue)

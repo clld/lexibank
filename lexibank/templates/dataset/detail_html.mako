@@ -36,7 +36,7 @@
                 <td></td>
             </tr>
             <tr>
-                <th>Cognate sets</th>
+                <th><a href="${request.route_url('cognatesets')}">Cognate sets</a></th>
                 <td class="right">${'{:,}'.format(stats['cognateset'])}</td>
                 <td></td>
             </tr>

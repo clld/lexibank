@@ -8,7 +8,7 @@ from clld.db.util import get_distinct_values
 from clld.db.models.common import Value, Contribution, ValueSet, Parameter, Language
 from clld.web.util.helpers import external_link, linked_references
 
-from clld.web.datatables.base import Col, IdCol, LinkCol, LinkToMapCol
+from clld.web.datatables.base import Col, IdCol, LinkCol, LinkToMapCol, DataTable
 from clld.web.datatables.language import Languages
 from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
@@ -20,7 +20,7 @@ from clld_glottologfamily_plugin.models import Family
 
 from models import (
     LexibankLanguage, Counterpart, Concept, Provider, LexibankSource,
-    CounterpartReference,
+    CounterpartReference, Cognateset,
 )
 
 
@@ -223,7 +223,35 @@ class Providers(Contributions):
         ]
 
 
+class ProviderCol(LinkCol):
+    def __init__(self, dt, name, **kw):
+        kw['model_col'] = Contribution.name
+        kw['choices'] = [(p.id, p.name) for p in DBSession.query(Provider)]
+        LinkCol.__init__(self, dt, name, **kw)
+
+    def search(self, qs):
+        return Contribution.id == qs
+
+
+class Cognatesets(DataTable):
+    def base_query(self, query):
+        return query.join(Cognateset.contribution)\
+            .options(joinedload(Cognateset.contribution))
+
+    def col_defs(self):
+        return [
+            IdCol(self, 'id'),
+            LinkCol(self, 'name'),
+            Col(self, 'cognates', model_col=Cognateset.representation),
+            ProviderCol(
+                self,
+                'provider',
+                get_object=lambda i: i.contribution),
+        ]
+
+
 def includeme(config):
+    config.register_datatable('cognatesets', Cognatesets)
     config.register_datatable('languages', LexibankLanguages)
     config.register_datatable('contributions', Providers)
     config.register_datatable('parameters', Concepts)

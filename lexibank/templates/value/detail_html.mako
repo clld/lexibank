@@ -47,6 +47,20 @@
             <td>${ctx.description}</td>
         </tr>
     % endif
+    % if ctx.cognatesets:
+        <tr>
+            <th>Cognatesets:</th>
+            <td>
+                <ul class="unstyled">
+                    % for cs in ctx.cognatesets:
+                    <li>
+                        ${h.link(request, cs.cognateset)}
+                    </li>
+                    % endfor
+                </ul>
+            </td>
+        </tr>
+    % endif
 </table>
 
 % if synonyms:

@@ -5,6 +5,7 @@ import os
 from _collections import defaultdict
 
 from sqlalchemy import Index, func
+from sqlalchemy.orm import joinedload_all
 from clld.scripts.util import initializedb, Data
 from clld.db.meta import DBSession
 from clld.db.models import common
@@ -17,7 +18,9 @@ from pyconcepticon.api import Concepticon
 
 import lexibank
 from lexibank.scripts.util import import_cldf
-from lexibank.models import LexibankLanguage, Concept, Provider, Counterpart
+from lexibank.models import (
+    LexibankLanguage, Concept, Provider, Counterpart, Cognateset, CognatesetCounterpart,
+)
 
 
 with_collkey_ddl()
@@ -73,6 +76,19 @@ def prime_cache(args):
     This procedure should be separate from the db initialization, because
     it will have to be run periodically whenever data has been updated.
     """
+    concept_labels = {r[0]: r[1] for r in
+                      DBSession.query(common.Parameter.pk, common.Parameter.name)}
+    for cogset in DBSession.query(Cognateset) \
+            .options(joinedload_all(
+                Cognateset.counterparts,
+                CognatesetCounterpart.counterpart,
+                common.Value.valueset)):
+        concepts = set()
+        for cp in cogset.counterparts:
+            concepts.add(cp.counterpart.valueset.parameter_pk)
+        cogset.name = '-'.join(sorted([concept_labels[pk] for pk in concepts]))
+        cogset.representation = len(cogset.counterparts)
+
     for concept in DBSession.query(Concept):
         concept.representation = DBSession.query(common.Language)\
             .join(common.ValueSet)\
