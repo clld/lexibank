@@ -53,7 +53,7 @@ def main(args):
     conceptsets = {c['ID']: c for c in concepticon.conceptsets()}
 
     for dname in repos.joinpath('datasets').iterdir():
-        #if dname.name != 'abvd':
+        #if dname.name not in ['wwua', 'pcogs']:
         #    continue
         if dname.is_dir() and dname.name != '_template':
             #if dname.name != 'zenodo34092':

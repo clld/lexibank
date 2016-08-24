@@ -132,4 +132,7 @@ def import_cldf(srcdir, md, languoids, conceptsets):
                         DBSession.add(CognatesetCounterpart(
                             cognateset=cs,
                             counterpart=cp,
-                            doubt=cognate['doubt'] == 'True'))
+                            cognate_detection_method=cognate['Cognate_detection_method'],
+                            alignment=cognate['Alignment'],
+                            alignment_method=cognate['Alignment_method'],
+                            doubt=cognate['Doubt'] == 'True'))

@@ -100,6 +100,9 @@ class CognatesetCounterpart(Base):
     counterpart_pk = Column(Integer, ForeignKey('counterpart.pk'))
     counterpart = relationship(Counterpart, backref='cognatesets')
     doubt = Column(Boolean, default=False)
+    cognate_detection_method = Column(Unicode)
+    alignment = Column(Unicode)
+    alignment_method = Column(Unicode)
 
 
 class CounterpartReference(Base, HasSourceMixin):
