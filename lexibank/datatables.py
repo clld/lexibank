@@ -18,7 +18,7 @@ from clld.web.datatables.source import Sources
 from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyLinkCol
 from clld_glottologfamily_plugin.models import Family
 
-from models import (
+from .models import (
     LexibankLanguage, Counterpart, Concept, Provider, LexibankSource,
     CounterpartReference, Cognateset,
 )
