@@ -18,7 +18,7 @@ from clld.web.datatables.source import Sources
 from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyLinkCol
 from clld_glottologfamily_plugin.models import Family
 
-from models import (
+from lexibank.models import (
     LexibankLanguage, Counterpart, Concept, Provider, LexibankSource,
     CounterpartReference, Cognateset,
 )
@@ -195,7 +195,7 @@ class Concepts(Parameters):
     def col_defs(self):
         return [
             IdCol(self, 'id'),
-            LinkCol(self, 'Concept'),
+            LinkCol(self, 'name', sTitle='Concept'),
             Col(self, 'Languages', model_col=Concept.representation),
             Col(self, 'semantic_field', model_col=Concept.semanticfield, choices=get_distinct_values(Concept.semanticfield)),
             ConcepticonLink(self, 'Concepticon'),
