@@ -10,6 +10,7 @@ from clld.lib.bibtex import EntryType, FIELDS
 from clldutils.dsv import reader
 from pycldf.dataset import Dataset
 from pycldf.util import MD_SUFFIX
+from tqdm import tqdm
 
 from lexibank.models import (
     LexibankLanguage, Concept, Counterpart, Provider, CounterpartReference,
@@ -34,7 +35,7 @@ def cldf2clld(source, contrib, id_):
         bibtex_type=getattr(EntryType, source.genre, EntryType.misc),
         name=name,
         description=description,
-        **{k: v for k, v in source.items() if k in FIELDS})
+        **{k: v for k, v in source.items() if k in FIELDS and k not in ['institution']})
 
 
 def import_dataset(ds, contrib, languoids, conceptsets, sources, values):
@@ -50,6 +51,9 @@ def import_dataset(ds, contrib, languoids, conceptsets, sources, values):
         if lid == 'none':
             continue
 
+        if not row['Parameter_ID'].strip():
+            continue
+
         language = langs.get(lid)
         if language is None:
             languoid = languoids.get(lid)
@@ -59,15 +63,17 @@ def import_dataset(ds, contrib, languoids, conceptsets, sources, values):
                 id=lid,
                 name=languoid.name,
                 level=text_type(languoid.level.name),
-                latitude=languoid.latitude,
+                latitude=languoid.latitude if languoid.id != 'plau1238' else -10,
                 longitude=languoid.longitude)
 
         concept = concepts.get(row['Parameter_ID'])
         if concept is None:
             cs = conceptsets[row['Parameter_ID']]
             concepts[row['Parameter_ID']] = concept = Concept(
-                # FIXME: get gloss and description from concepticon!
-                id=row['Parameter_ID'], name=cs['GLOSS'], description=cs['DEFINITION'], semanticfield=cs['SEMANTICFIELD'])
+                id=row['Parameter_ID'],
+                name=cs.gloss,
+                description=cs.definition,
+                semanticfield=cs.semanticfield)
 
         vsid = unique_id(contrib, '%s-%s-%s' % (ds.name, language.id, concept.id))
         vid = unique_id(contrib, row['ID'])
@@ -86,9 +92,9 @@ def import_dataset(ds, contrib, languoids, conceptsets, sources, values):
             Counterpart, row['ID'],
             id=vid,
             valueset=vs,
-            name=row['Value'],
+            name=row['Form'],
             description=row.get('Comment'),
-            context=row.get('Context'),
+            context=row['Value'],
             variety_name=row.get('Language_name'),
             loan=row.get('Loan', False),
         )
@@ -114,12 +120,13 @@ def import_cldf(srcdir, md, languoids, conceptsets):
         sources = {}
         cldfdir = srcdir.joinpath('cldf')
         values = Data()
-        for fname in cldfdir.glob('*' + MD_SUFFIX):
+        for fname in tqdm(list(cldfdir.glob('*' + MD_SUFFIX)), leave=False):
             ds = Dataset.from_metadata(fname)
             for src in ds.sources.items():
                 if src.id not in sources:
                     sources[src.id] = cldf2clld(src, contrib, len(sources) + 1)
             import_dataset(ds, contrib, languoids, conceptsets, sources, values)
+            DBSession.flush()
         # import cognates:
         if cldfdir.joinpath('cognates.csv').exists():
             for csid, cognates in groupby(

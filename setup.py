@@ -20,15 +20,25 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'clld>=3.1.0',
-        'clldmpg>=2.0.0',
-        'clld-glottologfamily-plugin>=1.3.4',
+        'clldmpg~=3.1',
+        'clld-glottologfamily-plugin>=2.0.1',
         'pycldf',
     ],
-    tests_require=[
-        'WebTest >= 1.3.1',  # py3 compat
-        'mock',
-    ],
+    extras_require={
+        'dev': ['flake8', 'waitress'],
+        'test': [
+            'psycopg2',
+            'tox',
+            'mock',
+            'pytest>=3.1',
+            'pytest-clld',
+            'pytest-mock',
+            'pytest-cov',
+            'coverage>=4.2',
+            'selenium',
+            'zope.component>=3.11.0',
+        ],
+    },
     test_suite="lexibank",
     entry_points="""\
 [paste.app_factory]

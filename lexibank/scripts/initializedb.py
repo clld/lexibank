@@ -39,26 +39,27 @@ def main(args):
             publisher_url="http://shh.mpg.de",
             license="http://creativecommons.org/licenses/by/4.0/",
             domain='lexibank.clld.org',
-            contact='forkel@shh.mpg.de',
+            contact='lexibank@shh.mpg.de',
             jsondata={
                 'license_icon': 'cc-by.png',
                 'license_name': 'Creative Commons Attribution 4.0 International License'})
         DBSession.add(dataset)
 
-    glottolog = Glottolog(
-        Path(lexibank.__file__).parent.parent.parent.parent.joinpath('glottolog3', 'glottolog'))
-    languoids = {l.id: l for l in glottolog.languoids()}
+    glottolog_repos = Path(
+        lexibank.__file__).parent.parent.parent.parent.joinpath('glottolog3', 'glottolog')
+    languoids = {l.id: l for l in Glottolog(glottolog_repos).languoids()}
     concepticon = Concepticon(
         Path(lexibank.__file__).parent.parent.parent.parent.joinpath('concepticon', 'concepticon-data'))
-    conceptsets = {c['ID']: c for c in concepticon.conceptsets()}
+    conceptsets = {c.id: c for c in concepticon.conceptsets.values()}
 
-    for dname in repos.joinpath('datasets').iterdir():
-        #if dname.name not in ['acbd']:
+    skip = True
+    for dname in sorted(repos.joinpath('datasets').iterdir(), key=lambda p: p.name):
+        #if dname.name == 'benuecongo':
+        #    skip = False
+        #if skip:
         #    continue
         if dname.is_dir() and dname.name != '_template':
-            #if dname.name != 'zenodo34092':
-            #    continue
-            mdpath = dname.joinpath('metadata.json')
+            mdpath = dname.joinpath('cldf', 'metadata.json')
             if mdpath.exists():
                 print(dname.name)
                 import_cldf(dname, load(mdpath), languoids, conceptsets)
@@ -67,7 +68,7 @@ def main(args):
         load_families(
             Data(),
             DBSession.query(LexibankLanguage),
-            glottolog=languoids,
+            glottolog_repos=glottolog_repos,
             isolates_icon='tcccccc')
 
 
