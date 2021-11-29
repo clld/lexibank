@@ -1,4 +1,4 @@
-from sqlalchemy.orm import joinedload, joinedload_all
+from sqlalchemy.orm import joinedload
 from pyramid.config import Configurator
 
 from clld_glottologfamily_plugin.util import LanguageByFamilyMapMarker
@@ -28,18 +28,16 @@ class LexibankCtxFactoryQuery(CtxFactoryQuery):
             query = query.options(joinedload(Contribution.data))
         if model == models.Cognateset:
             query = query.options(
-                joinedload_all(
-                    models.Cognateset.counterparts,
-                    models.CognatesetCounterpart.counterpart,
-                    Value.valueset,
-                    ValueSet.parameter,
-                ),
                 joinedload(
-                    models.Cognateset.counterparts,
-                    models.CognatesetCounterpart.counterpart,
-                    Value.valueset,
-                    ValueSet.language,
-                )
+                    models.Cognateset.counterparts).joineload(
+                    models.CognatesetCounterpart.counterpart).joinedload(
+                    Value.valueset).joinedload(
+                    ValueSet.parameter),
+                joinedload(
+                    models.Cognateset.counterparts).joinedload(
+                    models.CognatesetCounterpart.counterpart).joinedload(
+                    Value.valueset).joinedload(
+                    ValueSet.language)
             )
         return query
 

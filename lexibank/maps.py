@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from clld.web.maps import ParameterMap, Map
 
 

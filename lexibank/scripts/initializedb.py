@@ -1,12 +1,11 @@
-from __future__ import unicode_literals, division
 import sys
 import transaction
 import os
 from _collections import defaultdict
 
 from sqlalchemy import Index, func
-from sqlalchemy.orm import joinedload_all
-from clld.scripts.util import initializedb, Data
+from sqlalchemy.orm import joinedload
+from clld.cliutil import Data
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.db.util import collkey, with_collkey_ddl
@@ -80,9 +79,9 @@ def prime_cache(args):
     concept_labels = {r[0]: r[1] for r in
                       DBSession.query(common.Parameter.pk, common.Parameter.name)}
     for cogset in DBSession.query(Cognateset) \
-            .options(joinedload_all(
-                Cognateset.counterparts,
-                CognatesetCounterpart.counterpart,
+            .options(joinedload(
+                Cognateset.counterparts).joinedload(
+                CognatesetCounterpart.counterpart).joinedload(
                 common.Value.valueset)):
         concepts = set()
         for cp in cogset.counterparts:
@@ -136,8 +135,3 @@ def prime_cache(args):
             prov.synonym_index = sum(
                 [sum(list(counts.values())) / len(counts)
                  for counts in syns.values()]) / len(set(syns.keys()))
-
-
-if __name__ == '__main__':
-    initializedb(create=main, prime_cache=prime_cache)
-    sys.exit(0)

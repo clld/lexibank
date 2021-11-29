@@ -1,9 +1,7 @@
-# coding: utf8
-from __future__ import unicode_literals, division
 from itertools import groupby
 
 from sqlalchemy import func, desc, text
-from sqlalchemy.orm import joinedload, joinedload_all
+from sqlalchemy.orm import joinedload
 from clld_glottologfamily_plugin.models import Family
 from clld import RESOURCES
 from clld.db.meta import DBSession
@@ -30,7 +28,7 @@ def value_detail_html(context=None, request=None, **kw):
         .filter(Value.pk != context.pk)\
         .filter(ValueSet.parameter_pk == context.valueset.parameter_pk)\
         .filter(ValueSet.language_pk == context.valueset.language_pk)\
-        .options(joinedload_all(Value.valueset, ValueSet.contribution))\
+        .options(joinedload(Value.valueset).joinedload(ValueSet.contribution))\
         .order_by(ValueSet.contribution_pk)
     return {'synonyms': [(c, list(cps)) for c, cps in
                          groupby(syns, key=lambda v: v.valueset.contribution)]}

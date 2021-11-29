@@ -1,7 +1,4 @@
-# coding: utf-8
-from __future__ import unicode_literals
-
-from sqlalchemy.orm import joinedload, joinedload_all
+from sqlalchemy.orm import joinedload
 
 from clld.db.meta import DBSession
 from clld.db.util import get_distinct_values

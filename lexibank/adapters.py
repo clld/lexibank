@@ -1,9 +1,7 @@
-# coding: utf-8
-from __future__ import unicode_literals
 from collections import defaultdict
 from itertools import chain
 
-from sqlalchemy.orm import joinedload, joinedload_all
+from sqlalchemy.orm import joinedload
 from clld.db.meta import DBSession
 from clld.db.models.common import Value, ValueSet
 from clld.interfaces import IParameter
@@ -56,7 +54,7 @@ class Colexifications(Representation):
             v.pk: v for v in DBSession.query(Value)
             .filter(Value.pk.in_(list(chain(*pairs))))
             .options(
-                joinedload_all(Value.valueset, ValueSet.language, LexibankLanguage.family),
+                joinedload(Value.valueset).joinedload(ValueSet.language).joinedload(LexibankLanguage.family),
                 joinedload(Value.valueset, ValueSet.parameter),
                 joinedload(Value.valueset, ValueSet.contribution))
             }
