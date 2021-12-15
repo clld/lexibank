@@ -1,14 +1,12 @@
-import sys
 import transaction
 import os
 from _collections import defaultdict
 
-from sqlalchemy import Index, func
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from clld.cliutil import Data
 from clld.db.meta import DBSession
 from clld.db.models import common
-from clld.db.util import collkey, with_collkey_ddl
 from clld_glottologfamily_plugin.util import load_families
 from clldutils.path import Path
 from clldutils.jsonlib import load
@@ -22,11 +20,7 @@ from lexibank.models import (
 )
 
 
-with_collkey_ddl()
-
-
 def main(args):
-    Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
     repos = Path(os.path.expanduser('~')).joinpath('venvs/lexibank/lexibank-data')
 
     with transaction.manager:
