@@ -16,8 +16,7 @@ from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyLinkCol
 from clld_glottologfamily_plugin.models import Family
 
 from lexibank.models import (
-    LexibankLanguage, Counterpart, Concept, Provider, LexibankSource,
-    CounterpartReference, Cognateset,
+    LexibankLanguage, Form, Concept, Provider, LexibankSource,
 )
 
 
@@ -56,8 +55,7 @@ class RefsCol(Col):
 class Counterparts(Values):
     def base_query(self, query):
         query = query.join(ValueSet).options(
-            joinedload(Value.valueset),
-            joinedload_all(Counterpart.references, CounterpartReference.source)
+            joinedload(Value.valueset).joinedload(ValueSet.contribution),
         )
 
         if self.language:
@@ -73,8 +71,7 @@ class Counterparts(Values):
             query = query \
                 .join(ValueSet.language) \
                 .outerjoin(LexibankLanguage.family) \
-                .options(joinedload_all(
-                    Value.valueset, ValueSet.language, LexibankLanguage.family))
+                .options(joinedload(Value.valueset).joinedload(ValueSet.language).joinedload(LexibankLanguage.family))
             return query.filter(ValueSet.parameter_pk == self.parameter.pk)
 
         if self.contribution:
@@ -92,7 +89,7 @@ class Counterparts(Values):
     def col_defs(self):
         if self.parameter:
             return [
-                LinkCol(self, 'form', model_col=Counterpart.name),
+                LinkCol(self, 'form', model_col=Form.name),
                 LinkCol(
                     self,
                     'language',
@@ -103,19 +100,16 @@ class Counterparts(Values):
                     'family',
                     model_col=Family.name,
                     get_object=lambda i: i.valueset.language.family),
-                Col(self, 'variety', model_col=Counterpart.variety_name),
-                #Col(self, 'loan', model_col=Counterpart.loan),
-                RefsCol(self, 'source'),
             ]
         if self.language:
             return [
-                LinkCol(self, 'form', model_col=Counterpart.name),
+                LinkCol(self, 'form', model_col=Form.name),
                 LinkCol(
                     self,
                     'concept',
                     model_col=Concept.name,
                     get_object=lambda i: i.valueset.parameter),
-                Col(self, 'variety', model_col=Counterpart.variety_name),
+                Col(self, 'variety', model_col=Form.variety_name),
                 LinkCol(
                     self,
                     'provider',
@@ -125,7 +119,6 @@ class Counterparts(Values):
             ]
         return [
             LinkCol(self, 'form', model_col=Value.name),
-            Col(self, 'context', model_col=Counterpart.context),
             LinkCol(
                 self,
                 'language',
@@ -136,6 +129,10 @@ class Counterparts(Values):
                 'concept',
                 model_col=Parameter.name,
                 get_object=lambda i: i.valueset.parameter),
+            Col(self, 'Central_concept', model_col=Concept.central_concept, get_object=lambda i: i.valueset.parameter),
+            Col(self, 'Segments', model_col=Form.segments),
+            Col(self, 'CV_Template', model_col=Form.CV_Template),
+            Col(self, 'DSC', model_col=Form.Dolgo_Sound_Classes),
         ]
 
 
@@ -230,25 +227,7 @@ class ProviderCol(LinkCol):
         return Contribution.id == qs
 
 
-class Cognatesets(DataTable):
-    def base_query(self, query):
-        return query.join(Cognateset.contribution)\
-            .options(joinedload(Cognateset.contribution))
-
-    def col_defs(self):
-        return [
-            IdCol(self, 'id'),
-            LinkCol(self, 'name'),
-            Col(self, 'cognates', model_col=Cognateset.representation),
-            ProviderCol(
-                self,
-                'provider',
-                get_object=lambda i: i.contribution),
-        ]
-
-
 def includeme(config):
-    config.register_datatable('cognatesets', Cognatesets)
     config.register_datatable('languages', LexibankLanguages)
     config.register_datatable('contributions', Providers)
     config.register_datatable('parameters', Concepts)

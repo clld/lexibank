@@ -7,9 +7,9 @@
     <%util:well title="lexibank data repository">
         <a href="${req.resource_url(req.dataset)}" style="font-family: monospace">lexibank.clld.org</a>
         serves the latest
-        ${h.external_link('https://github.com/glottobank/lexibank-data/releases', label='released version')}
+        ${h.external_link('https://github.com/lexibank/lexibank-analysed/releases', label='released version')}
         of data curated at
-        ${h.external_link('https://github.com/glottobank/lexibank-data', label='glottobank/lexibank-data')}.
+        ${h.external_link('https://github.com/lexibank/lexibank-analysed', label='lexibank/lexibank-analysed')}.
     </%util:well>
 </%def>
 
@@ -33,11 +33,6 @@
             <tr>
                 <th><a href="${request.route_url('parameters')}">Concepts</a></th>
                 <td class="right">${'{:,}'.format(stats['parameter'])}</td>
-                <td></td>
-            </tr>
-            <tr>
-                <th><a href="${request.route_url('cognatesets')}">Cognate sets</a></th>
-                <td class="right">${'{:,}'.format(stats['cognateset'])}</td>
                 <td></td>
             </tr>
             <tr>

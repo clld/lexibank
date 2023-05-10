@@ -1,20 +1,18 @@
-from __future__ import unicode_literals
 from itertools import groupby
 
 import transaction
 from six import text_type
 from clld.db.meta import DBSession
 from clld.db.models.common import ValueSet
-from clld.scripts.util import Data
+from clld.cliutil import Data
 from clld.lib.bibtex import EntryType, FIELDS
-from clldutils.dsv import reader
+from csvw.dsv import reader
 from pycldf.dataset import Dataset
-from pycldf.util import MD_SUFFIX
 from tqdm import tqdm
 
 from lexibank.models import (
-    LexibankLanguage, Concept, Counterpart, Provider, CounterpartReference,
-    LexibankSource, Cognateset, CognatesetCounterpart,
+    LexibankLanguage, Concept, Form, Provider,
+    LexibankSource,
 )
 
 
@@ -89,7 +87,7 @@ def import_dataset(ds, contrib, languoids, conceptsets, sources, values):
                 source=None)  # FIXME: add sources!
 
         counterpart = values.add(
-            Counterpart, row['ID'],
+            Form, row['ID'],
             id=vid,
             valueset=vs,
             name=row['Form'],
@@ -127,19 +125,3 @@ def import_cldf(srcdir, md, languoids, conceptsets):
                     sources[src.id] = cldf2clld(src, contrib, len(sources) + 1)
             import_dataset(ds, contrib, languoids, conceptsets, sources, values)
             DBSession.flush()
-        # import cognates:
-        if cldfdir.joinpath('cognates.csv').exists():
-            for csid, cognates in groupby(
-                    reader(cldfdir.joinpath('cognates.csv'), dicts=True),
-                    lambda i: i['Cognate_set_ID']):
-                cs = Cognateset(id=unique_id(contrib, csid), contribution=contrib)
-                for cognate in cognates:
-                    cp = values['Counterpart'].get(cognate['Word_ID'])
-                    if cp:
-                        DBSession.add(CognatesetCounterpart(
-                            cognateset=cs,
-                            counterpart=cp,
-                            cognate_detection_method=cognate['Cognate_detection_method'],
-                            alignment=cognate['Alignment'],
-                            alignment_method=cognate['Alignment_method'],
-                            doubt=cognate['Doubt'] == 'True'))

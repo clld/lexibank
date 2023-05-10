@@ -1,12 +1,16 @@
-import transaction
-import os
-from _collections import defaultdict
+import pathlib
+import itertools
+from collections import defaultdict
 
+import transaction
+from pycldf.db import Database
+from csvw.dsv import reader
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
-from clld.cliutil import Data
+from clld.cliutil import Data, bibtex2source
 from clld.db.meta import DBSession
 from clld.db.models import common
+from clld.lib.bibtex import EntryType
 from clld_glottologfamily_plugin.util import load_families
 from clldutils.path import Path
 from clldutils.jsonlib import load
@@ -14,29 +18,102 @@ from pyglottolog.api import Glottolog
 from pyconcepticon.api import Concepticon
 
 import lexibank
-from lexibank.scripts.util import import_cldf
-from lexibank.models import (
-    LexibankLanguage, Concept, Provider, Counterpart, Cognateset, CognatesetCounterpart,
-)
+#from lexibank.scripts.util import import_cldf
+from lexibank.models import LexibankLanguage, Concept, Provider, Form
+
+CLICS_LIST = pathlib.Path('/home/robert/projects/concepticon/concepticon-cldf/raw/'
+                          'concepticon-data/concepticondata/conceptlists/Rzymski-2020-1624.tsv')
 
 
 def main(args):
-    repos = Path(os.path.expanduser('~')).joinpath('venvs/lexibank/lexibank-data')
+    cldf = args.cldf
+    db = Database(cldf, fname=cldf.directory / '..' / 'lexibank.sqlite')
+    clusters = {row['CONCEPTICON_ID']: row for row in reader(CLICS_LIST, delimiter='\t', dicts=True)}
 
     with transaction.manager:
         dataset = common.Dataset(
             id=lexibank.__name__,
             name="lexibank",
-            publisher_name="Max Planck Institute for the Science of Human History",
-            publisher_place="Jena",
-            publisher_url="http://shh.mpg.de",
+            publisher_name="Max Planck Institute for Evolutionary Anthropology",
+            publisher_place="Leipzig",
+            publisher_url="https://www.eva.mpg.de",
             license="http://creativecommons.org/licenses/by/4.0/",
             domain='lexibank.clld.org',
-            contact='lexibank@shh.mpg.de',
+            contact='lexibank@eva.mpg.de',
             jsondata={
                 'license_icon': 'cc-by.png',
                 'license_name': 'Creative Commons Attribution 4.0 International License'})
         DBSession.add(dataset)
+
+        #
+        # ID>-----Organization>---Dataset>Source>-Zenodo>-Todo>---ClicsCore>------LexiCore>-------CogCore>ProtoCore>------Version
+        contribs = {
+            row['Source']: row for row in reader(
+                cldf.directory / '..' / 'etc' / 'lexibank-bliss.tsv', delimiter='\t', dicts=True)
+        }
+        data = Data()
+
+        for row in db.query("select distinct sourcetable_id from formtable_sourcetable"):
+            contrib = contribs[row[0]]
+            src = cldf.sources[row[0]]
+            try:
+                src.genre = EntryType.get(src.genre)
+            except ValueError:
+                src.genre = EntryType.misc
+            p = data.add(Provider, row[0], id=row[0], name='{}. {}. {}'.format(src.get('author') or src.get('editor'), src['year'], src['title']))
+            data.add(common.Source, row[0], _obj=bibtex2source(src))
+        for row in cldf.iter_rows('LanguageTable'):
+            data.add(LexibankLanguage, row['ID'], id=row['ID'], name=row['Name'])
+
+        for row in cldf.iter_rows('ParameterTable'):
+            cluster = clusters.get(row['Concepticon_ID'])
+            data.add(
+                Concept, row['ID'],
+                id=row['Concepticon_ID'],
+                name=row['Name'],
+                cluster_id=cluster['COMMUNITY'] if cluster else None,
+                central_concept=cluster['CENTRAL_CONCEPT'] if cluster else None)
+
+        DBSession.flush()
+        for key in data:
+            data[key] = {k: v.pk for k, v in data[key].items()}
+
+    with db.connection() as conn:
+        cu = conn.cursor()
+        cu.execute('select f.* from formtable as f')
+        formcols = [r[0] for r in cu.description]
+
+    for src in data['Source']:
+        with transaction.manager:
+            vss = Data()
+            print('{} ...'.format(src))
+            for row in db.query(
+                "select f.* from formtable as f, formtable_sourcetable as s "
+                "where s.formtable_cldf_id = f.cldf_id and s.sourcetable_id = ?",
+                (src,)
+            ):
+                row = dict(zip(formcols, row))
+                vsid = (src, row['cldf_languageReference'], row['cldf_parameterReference'])
+                vs = vss['ValueSet'].get(vsid)
+                if not vs:
+                    vs = vss.add(
+                        common.ValueSet,
+                        vsid,
+                        id='{}-{}-{}'.format(*vsid),
+                        language_pk=data['LexibankLanguage'][row['cldf_languageReference']],
+                        parameter_pk=data['Concept'][row['cldf_parameterReference']],
+                        contribution_pk=data['Provider'][src],
+                    )
+                DBSession.add(Form(
+                    id=row['cldf_id'],
+                    name=row['cldf_form'],
+                    segments=row['cldf_segments'],
+                    CV_Template=row['CV_Template'],
+                    Prosodic_String=row['Prosodic_String'],
+                    Dolgo_Sound_Classes=row['Dolgo_Sound_Classes'],
+                    SCA_Sound_Classes=row['SCA_Sound_Classes'],
+                    valueset=vs))
+    return
 
     glottolog_repos = Path(
         lexibank.__file__).parent.parent.parent.parent.joinpath('glottolog3', 'glottolog')
@@ -70,19 +147,6 @@ def prime_cache(args):
     This procedure should be separate from the db initialization, because
     it will have to be run periodically whenever data has been updated.
     """
-    concept_labels = {r[0]: r[1] for r in
-                      DBSession.query(common.Parameter.pk, common.Parameter.name)}
-    for cogset in DBSession.query(Cognateset) \
-            .options(joinedload(
-                Cognateset.counterparts).joinedload(
-                CognatesetCounterpart.counterpart).joinedload(
-                common.Value.valueset)):
-        concepts = set()
-        for cp in cogset.counterparts:
-            concepts.add(cp.counterpart.valueset.parameter_pk)
-        cogset.name = '-'.join(sorted([concept_labels[pk] for pk in concepts]))
-        cogset.representation = len(cogset.counterparts)
-
     for concept in DBSession.query(Concept):
         concept.representation = DBSession.query(common.Language)\
             .join(common.ValueSet)\
@@ -105,27 +169,3 @@ def prime_cache(args):
             .join(common.ValueSet)\
             .filter(common.ValueSet.contribution_pk == prov.pk)\
             .count()
-
-        syns = defaultdict(dict)
-        vs = common.ValueSet.__table__
-        cp = Counterpart.__table__
-        v = common.Value.__table__
-        for vn, lpk, ppk, count in DBSession.query(
-            cp.c.variety_name,
-            vs.c.language_pk,
-            vs.c.parameter_pk,
-            func.count(v.c.pk)) \
-            .filter(cp.c.pk == v.c.pk) \
-            .filter(v.c.valueset_pk == vs.c.pk) \
-            .filter(vs.c.contribution_pk == prov.pk) \
-            .group_by(
-            cp.c.variety_name,
-            vs.c.language_pk,
-            vs.c.parameter_pk
-        ):
-            syns[(vn, lpk)][ppk] = count
-
-        if syns:
-            prov.synonym_index = sum(
-                [sum(list(counts.values())) / len(counts)
-                 for counts in syns.values()]) / len(set(syns.keys()))

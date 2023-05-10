@@ -8,7 +8,6 @@ from clld.db.models.common import Contribution, ValueSet, Value
 
 # we must make sure custom models are known at database initialization!
 from lexibank import models
-from lexibank.interfaces import ICognateset
 
 
 _ = lambda s: s
@@ -26,19 +25,6 @@ class LexibankCtxFactoryQuery(CtxFactoryQuery):
     def refined_query(self, query, model, req):
         if model == Contribution:
             query = query.options(joinedload(Contribution.data))
-        if model == models.Cognateset:
-            query = query.options(
-                joinedload(
-                    models.Cognateset.counterparts).joineload(
-                    models.CognatesetCounterpart.counterpart).joinedload(
-                    Value.valueset).joinedload(
-                    ValueSet.parameter),
-                joinedload(
-                    models.Cognateset.counterparts).joinedload(
-                    models.CognatesetCounterpart.counterpart).joinedload(
-                    Value.valueset).joinedload(
-                    ValueSet.language)
-            )
         return query
 
 
@@ -59,5 +45,4 @@ def main(global_config, **settings):
     config.include('clld_glottologfamily_plugin')
     config.registry.registerUtility(MyMapMarker(), IMapMarker)
     config.registry.registerUtility(LexibankCtxFactoryQuery(), ICtxFactoryQuery)
-    config.register_resource('cognateset', models.Cognateset, ICognateset, with_index=True)
     return config.make_wsgi_app()
