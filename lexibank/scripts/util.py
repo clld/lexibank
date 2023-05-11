@@ -11,7 +11,7 @@ from pycldf.dataset import Dataset
 from tqdm import tqdm
 
 from lexibank.models import (
-    LexibankLanguage, Concept, Form, Provider,
+    LexibankLanguage, Concept, Form, LexibankDataset,
     LexibankSource,
 )
 
@@ -106,7 +106,7 @@ def import_dataset(ds, contrib, languoids, conceptsets, sources, values):
 
 def import_cldf(srcdir, md, languoids, conceptsets):
     with transaction.manager:
-        contrib = Provider(
+        contrib = LexibankDataset(
             id=srcdir.name,
             name=md['dc:title'],
             description=md.get('dc:bibliographicCitation'),

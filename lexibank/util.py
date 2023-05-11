@@ -5,11 +5,20 @@ from sqlalchemy.orm import joinedload
 from clld_glottologfamily_plugin.models import Family
 from clld import RESOURCES
 from clld.db.meta import DBSession
-from clld.db.models.common import Language, Value, ValueSet
+from clld.db.models.common import Language, Value, ValueSet, Config
 from clld.web.util.htmllib import HTML
 from clld.web.maps import SelectedLanguagesMap
+from clld.web.util import glottolog
+from clld.web.util import concepticon
 
 from lexibank.models import LexibankLanguage
+
+
+#
+# FIXME:
+#  CLICS-link
+#  CLTS-link
+#
 
 
 def concepticon_link(request, concept):
@@ -23,15 +32,8 @@ def concepticon_link(request, concept):
 
 
 def value_detail_html(context=None, request=None, **kw):
-    syns = DBSession.query(Value)\
-        .join(ValueSet) \
-        .filter(Value.pk != context.pk)\
-        .filter(ValueSet.parameter_pk == context.valueset.parameter_pk)\
-        .filter(ValueSet.language_pk == context.valueset.language_pk)\
-        .options(joinedload(Value.valueset).joinedload(ValueSet.contribution))\
-        .order_by(ValueSet.contribution_pk)
-    return {'synonyms': [(c, list(cps)) for c, cps in
-                         groupby(syns, key=lambda v: v.valueset.contribution)]}
+    bipa = DBSession.query(Config).filter(Config.key=='bipa_mapping').one().jsondata
+    return {'segments': [(s, bipa.get(s)) for s in context.segments.split()]}
 
 
 def contribution_detail_html(context=None, request=None, **kw):

@@ -35,11 +35,11 @@ msgstr "Datasets"
 
 #: lexibank/__init__.py:15
 msgid "Value"
-msgstr "Counterpart"
+msgstr "Word"
 
 #: lexibank/__init__.py:16
 msgid "Values"
-msgstr "Counterparts"
+msgstr "Words"
 
 #: lexibank/__init__.py:17
 msgid "Valueset"

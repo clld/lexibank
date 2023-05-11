@@ -15,26 +15,7 @@ from clld.web.datatables.source import Sources
 from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyLinkCol
 from clld_glottologfamily_plugin.models import Family
 
-from lexibank.models import (
-    LexibankLanguage, Form, Concept, Provider, LexibankSource,
-)
-
-
-class LexibankSources(Sources):
-    def base_query(self, query):
-        query = Sources.base_query(self, query)
-        query = query.join(LexibankSource.provider).options(joinedload(LexibankSource.provider))
-        return query
-
-    def col_defs(self):
-        cols = Sources.col_defs(self)
-        provider = LinkCol(
-            self,
-            'provider',
-            choices=get_distinct_values(Provider.name),
-            model_col=Provider.name,
-            get_object=lambda i: i.provider)
-        return cols[:-1] + [provider]
+from lexibank.models import LexibankLanguage, Form, Concept, LexibankDataset
 
 
 class MaybeLinkCol(LinkCol):
@@ -80,10 +61,10 @@ class Counterparts(Values):
 
         return query \
             .join(ValueSet.parameter)\
-            .join(ValueSet.language)\
+            .join(ValueSet.language).outerjoin(LexibankLanguage.family)\
             .options(
-                joinedload(Value.valueset, ValueSet.parameter),
-                joinedload(Value.valueset, ValueSet.language),
+                joinedload(Value.valueset).joinedload(ValueSet.parameter),
+                joinedload(Value.valueset).joinedload(ValueSet.language).joinedload(LexibankLanguage.family),
             )
 
     def col_defs(self):
@@ -124,6 +105,11 @@ class Counterparts(Values):
                 'language',
                 model_col=Language.name,
                 get_object=lambda i: i.valueset.language),
+            MaybeLinkCol(
+                self,
+                'family',
+                model_col=Family.name,
+                get_object=lambda i: i.valueset.language.family),
             LinkCol(
                 self,
                 'concept',
@@ -132,7 +118,8 @@ class Counterparts(Values):
             Col(self, 'Central_concept', model_col=Concept.central_concept, get_object=lambda i: i.valueset.parameter),
             Col(self, 'Segments', model_col=Form.segments),
             Col(self, 'CV_Template', model_col=Form.CV_Template),
-            Col(self, 'DSC', model_col=Form.Dolgo_Sound_Classes),
+            Col(self, 'Dolgopolsky', model_col=Form.Dolgo_Sound_Classes),
+            Col(self, 'SCA', model_col=Form.SCA_Sound_Classes),
         ]
 
 
@@ -202,17 +189,17 @@ class Providers(Contributions):
             IdCol(self, 'id'),
             LinkCol(self, 'name'),
             Col(self, 'cite', model_col=Contribution.description),
-            Col(self, 'language_count', sTitle='# languages', model_col=Provider.language_count),
-            Col(self, 'parameter_count', sTitle='# concepts', model_col=Provider.parameter_count),
+            Col(self, 'language_count', sTitle='# languages', model_col=LexibankDataset.language_count),
+            Col(self, 'parameter_count', sTitle='# concepts', model_col=LexibankDataset.parameter_count),
             Col(self,
                 'lexeme_count',
                 sTitle='# lexemes',
-                model_col=Provider.lexeme_count,
+                model_col=LexibankDataset.lexeme_count,
                 format=lambda i: '{:,}'.format(i.lexeme_count)),
             Col(self,
                 'synonymy',
-                sDescription=Provider.synonym_index.doc,
-                model_col=Provider.synonym_index,
+                sDescription=LexibankDataset.synonym_index.doc,
+                model_col=LexibankDataset.synonym_index,
                 format=lambda i: '{:.3f}'.format(i.synonym_index))
         ]
 
@@ -220,7 +207,7 @@ class Providers(Contributions):
 class ProviderCol(LinkCol):
     def __init__(self, dt, name, **kw):
         kw['model_col'] = Contribution.name
-        kw['choices'] = [(p.id, p.name) for p in DBSession.query(Provider)]
+        kw['choices'] = [(p.id, p.name) for p in DBSession.query(LexibankDataset)]
         LinkCol.__init__(self, dt, name, **kw)
 
     def search(self, qs):
@@ -232,4 +219,3 @@ def includeme(config):
     config.register_datatable('contributions', Providers)
     config.register_datatable('parameters', Concepts)
     config.register_datatable('values', Counterparts)
-    config.register_datatable('sources', LexibankSources)

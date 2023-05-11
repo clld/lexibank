@@ -1,4 +1,5 @@
 from uuid import uuid1
+import urllib.parse
 
 from zope.interface import implementer
 from sqlalchemy import (
@@ -27,11 +28,12 @@ def uuid():
 
 
 @implementer(interfaces.IContribution)
-class Provider(CustomModelMixin, Contribution):
+class LexibankDataset(CustomModelMixin, Contribution, HasSourceMixin):
     pk = Column(Integer, ForeignKey('contribution.pk'), primary_key=True)
     url = Column(Unicode)
-    license = Column(Unicode)
-    aboutUrl = Column(Unicode)
+    version = Column(Unicode)
+    doi = Column(Unicode)
+
     language_count = Column(Integer)
     parameter_count = Column(Integer)
     lexeme_count = Column(Integer)
@@ -41,6 +43,9 @@ class Provider(CustomModelMixin, Contribution):
         doc="""A measure how often a dataset provides multiple synonyms for
 a concept in a language. 1 means for each concept in each language at most one counterpart
 is given.""")
+
+    def profile_url(self, name):
+        return '{}/blob/{}/etc/{}'.format(self.url, self.version, name)
 
 
 @implementer(interfaces.IParameter)
@@ -53,26 +58,25 @@ class Concept(CustomModelMixin, Parameter):
 
     @property
     def concepticon_url(self):
-        return 'https://concepticon.clld.org/parameters/{0}'.format(self.id)
+        return 'https://concepticon.clld.org/parameters/{}'.format(self.id)
+
+    @property
+    def clics_url(self):
+        if self.cluster_id:
+            return 'https://clics.clld.org/graphs/infomap_{}_{}'.format(
+                self.cluster_id, urllib.parse.quote(self.central_concept))
 
 
 @implementer(interfaces.ILanguage)
 class LexibankLanguage(CustomModelMixin, Language, HasFamilyMixin):
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
-    level = Column(Unicode)
-
-
-@implementer(interfaces.ISource)
-class LexibankSource(CustomModelMixin, Source):
-    pk = Column(Integer, ForeignKey('source.pk'), primary_key=True)
-    provider_pk = Column(Integer, ForeignKey('provider.pk'))
-    provider = relationship(Provider, backref='sources')
+    glottocode = Column(Unicode)
 
 
 @implementer(interfaces.IValue)
 class Form(CustomModelMixin, Value):
     pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
-
+    profile = Column(Unicode)
     segments = Column(Unicode)
     CV_Template = Column(Unicode)
     Prosodic_String = Column(Unicode)

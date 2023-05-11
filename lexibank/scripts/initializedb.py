@@ -1,3 +1,4 @@
+import collections
 import pathlib
 import itertools
 from collections import defaultdict
@@ -12,25 +13,33 @@ from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib.bibtex import EntryType
 from clld_glottologfamily_plugin.util import load_families
-from clldutils.path import Path
+from clldutils.path import Path, git_describe
 from clldutils.jsonlib import load
 from pyglottolog.api import Glottolog
 from pyconcepticon.api import Concepticon
+from pyclts import CLTS
+from pyclts.models import Sound
+from nameparser import HumanName
 
 import lexibank
 #from lexibank.scripts.util import import_cldf
-from lexibank.models import LexibankLanguage, Concept, Provider, Form
+from lexibank.models import LexibankLanguage, Concept, LexibankDataset, Form
 
 CLICS_LIST = pathlib.Path('/home/robert/projects/concepticon/concepticon-cldf/raw/'
                           'concepticon-data/concepticondata/conceptlists/Rzymski-2020-1624.tsv')
 
 
 def main(args):
+    from cldfcatalog import Repository
+
+    bipa = CLTS(pathlib.Path('/home/robert/projects/cldf-clts/clts-data')).bipa
+
     cldf = args.cldf
     db = Database(cldf, fname=cldf.directory / '..' / 'lexibank.sqlite')
     clusters = {row['CONCEPTICON_ID']: row for row in reader(CLICS_LIST, delimiter='\t', dicts=True)}
 
     with transaction.manager:
+        data = Data()
         dataset = common.Dataset(
             id=lexibank.__name__,
             name="lexibank",
@@ -45,25 +54,58 @@ def main(args):
                 'license_name': 'Creative Commons Attribution 4.0 International License'})
         DBSession.add(dataset)
 
-        #
+        for i, name in enumerate([
+            'Johann-Mattis List',
+            'Robert Forkel',
+            'Simon J. Greenhill',
+            'Christoph Rzymski',
+            'Johannes Englisch',
+            'Russell D. Gray',
+        ], start=1):
+            n = HumanName(name)
+            c = data.add(common.Contributor, n.last, id=n.last, name=name)
+            DBSession.add(common.Editor(contributor=c, dataset=dataset, ord=i))
+
         # ID>-----Organization>---Dataset>Source>-Zenodo>-Todo>---ClicsCore>------LexiCore>-------CogCore>ProtoCore>------Version
         contribs = {
             row['Source']: row for row in reader(
                 cldf.directory / '..' / 'etc' / 'lexibank-bliss.tsv', delimiter='\t', dicts=True)
         }
-        data = Data()
+
+        profiles = collections.defaultdict(dict)
 
         for row in db.query("select distinct sourcetable_id from formtable_sourcetable"):
             contrib = contribs[row[0]]
+            d = cldf.directory / '..' / 'raw' / contrib['ID']
+            assert d.exists()
+            assert contrib['Version'] == git_describe(d), '{} {} {}'.format(contrib['ID'], contrib['Version'], git_describe(d))
+
+            for p in d.joinpath('etc').glob('orthography'):
+                if p.is_dir():
+                    for pp in p.glob('*.tsv'):
+                        profiles[row[0]][pp.stem] = '{}/{}'.format(p.name, pp.name)
+            global_profile = d / 'etc' / 'orthography.tsv'
+            if global_profile.exists():
+                profiles[row[0]][None] = global_profile.name
+
             src = cldf.sources[row[0]]
             try:
                 src.genre = EntryType.get(src.genre)
             except ValueError:
                 src.genre = EntryType.misc
-            p = data.add(Provider, row[0], id=row[0], name='{}. {}. {}'.format(src.get('author') or src.get('editor'), src['year'], src['title']))
-            data.add(common.Source, row[0], _obj=bibtex2source(src))
+            source = data.add(common.Source, row[0], _obj=bibtex2source(src))
+            p = data.add(
+                LexibankDataset, row[0],
+                id=row[0],
+                name='{}. {}. {}'.format(src.get('author') or src.get('editor'), src['year'], src['title']),
+                url=Repository(d).url,
+                version=contrib['Version'],
+                doi=contrib['Zenodo'],
+                source=source,
+            )
+
         for row in cldf.iter_rows('LanguageTable'):
-            data.add(LexibankLanguage, row['ID'], id=row['ID'], name=row['Name'])
+            data.add(LexibankLanguage, row['ID'], id=row['ID'], name=row['Name'], glottocode=row['Glottocode'])
 
         for row in cldf.iter_rows('ParameterTable'):
             cluster = clusters.get(row['Concepticon_ID'])
@@ -83,6 +125,7 @@ def main(args):
         cu.execute('select f.* from formtable as f')
         formcols = [r[0] for r in cu.description]
 
+    sounds = {}
     for src in data['Source']:
         with transaction.manager:
             vss = Data()
@@ -102,21 +145,40 @@ def main(args):
                         id='{}-{}-{}'.format(*vsid),
                         language_pk=data['LexibankLanguage'][row['cldf_languageReference']],
                         parameter_pk=data['Concept'][row['cldf_parameterReference']],
-                        contribution_pk=data['Provider'][src],
+                        contribution_pk=data['LexibankDataset'][src],
                     )
+                profile = None
+                if row['cldf_languageReference'].split('-')[1] in profiles[src]:
+                    profile = profiles[src][row['cldf_languageReference'].split('-')[1]]
+                elif None in profiles[src]:
+                    profile = profiles[src][None]
+                for s in row['cldf_segments'].split():
+                    sound = bipa[s]
+                    if isinstance(sound, Sound):
+                        sounds[s] = sound.name
                 DBSession.add(Form(
                     id=row['cldf_id'],
                     name=row['cldf_form'],
                     segments=row['cldf_segments'],
+                    profile=profile,
                     CV_Template=row['CV_Template'],
                     Prosodic_String=row['Prosodic_String'],
                     Dolgo_Sound_Classes=row['Dolgo_Sound_Classes'],
                     SCA_Sound_Classes=row['SCA_Sound_Classes'],
                     valueset=vs))
+
+    with transaction.manager:
+        glottolog_repos = Path(
+            lexibank.__file__).parent.parent.parent.parent.joinpath('glottolog', 'glottolog')
+        load_families(
+            Data(),
+            [(l.glottocode, l) for l in DBSession.query(LexibankLanguage)],
+            glottolog_repos=glottolog_repos,
+            strict=False,
+            isolates_icon='tcccccc')
+        DBSession.add(common.Config(key='bipa_mapping', jsondata=sounds))
     return
 
-    glottolog_repos = Path(
-        lexibank.__file__).parent.parent.parent.parent.joinpath('glottolog3', 'glottolog')
     languoids = {l.id: l for l in Glottolog(glottolog_repos).languoids()}
     concepticon = Concepticon(
         Path(lexibank.__file__).parent.parent.parent.parent.joinpath('concepticon', 'concepticon-data'))
@@ -154,7 +216,7 @@ def prime_cache(args):
             .distinct()\
             .count()
 
-    for prov in DBSession.query(Provider):
+    for prov in DBSession.query(LexibankDataset):
         q = DBSession.query(common.ValueSet.language_pk)\
             .filter(common.ValueSet.contribution_pk == prov.pk)\
             .distinct()
