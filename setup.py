@@ -20,6 +20,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
+        'pyclts',
         'clld>=10',
         'clldmpg>=4.2',
         'clld-glottologfamily-plugin>=2.0.1',
