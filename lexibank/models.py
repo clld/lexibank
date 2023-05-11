@@ -17,7 +17,7 @@ from uritemplate import expand
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
-    Language, Parameter, Contribution, Value, HasSourceMixin, Source,
+    Language, Parameter, Contribution, Value, HasSourceMixin,
 )
 
 from clld_glottologfamily_plugin.models import HasFamilyMixin
@@ -71,6 +71,8 @@ class Concept(CustomModelMixin, Parameter):
 class LexibankLanguage(CustomModelMixin, Language, HasFamilyMixin):
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
     glottocode = Column(Unicode)
+    contribution_pk = Column(Integer, ForeignKey('contribution.pk'))
+    contribution = relationship(Contribution)
 
 
 @implementer(interfaces.IValue)

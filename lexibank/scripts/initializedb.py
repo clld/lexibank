@@ -22,11 +22,20 @@ from pyclts.models import Sound
 from nameparser import HumanName
 
 import lexibank
-#from lexibank.scripts.util import import_cldf
 from lexibank.models import LexibankLanguage, Concept, LexibankDataset, Form
 
 CLICS_LIST = pathlib.Path('/home/robert/projects/concepticon/concepticon-cldf/raw/'
                           'concepticon-data/concepticondata/conceptlists/Rzymski-2020-1624.tsv')
+
+
+def iter_rows(db, table, query, params=None):
+    with db.connection() as conn:
+        cu = conn.cursor()
+        cu.execute('select * from  {} limit 1'.format(table))
+        cols = [r[0] for r in cu.description]
+
+    for row in db.query(query, params or ()):
+        yield dict(zip(cols, row))
 
 
 def main(args):
@@ -104,8 +113,24 @@ def main(args):
                 source=source,
             )
 
-        for row in cldf.iter_rows('LanguageTable'):
-            data.add(LexibankLanguage, row['ID'], id=row['ID'], name=row['Name'], glottocode=row['Glottocode'])
+        l2ds = {
+            row[0]: row[1] for row in db.query(
+                "select distinct f.cldf_languagereference, s.sourcetable_id from formtable as f, formtable_sourcetable as s where s.formtable_cldf_id = f.cldf_id;")
+        }
+
+        for row in iter_rows(
+                db,
+                'languagetable',
+                "select l.* from languagetable as l where l.cldf_id in (select cldf_languagereference from formtable)",
+        ):
+            data.add(
+                LexibankLanguage, row['cldf_id'],
+                id=row['cldf_id'],
+                name=row['cldf_name'],
+                contribution=data['LexibankDataset'][l2ds[row['cldf_id']]],
+                latitude=row['cldf_latitude'],
+                longitude=row['cldf_longitude'],
+                glottocode=row['cldf_glottocode'])
 
         for row in cldf.iter_rows('ParameterTable'):
             cluster = clusters.get(row['Concepticon_ID'])
@@ -120,22 +145,19 @@ def main(args):
         for key in data:
             data[key] = {k: v.pk for k, v in data[key].items()}
 
-    with db.connection() as conn:
-        cu = conn.cursor()
-        cu.execute('select f.* from formtable as f')
-        formcols = [r[0] for r in cu.description]
-
+    segments = collections.defaultdict(collections.Counter)
     sounds = {}
     for src in data['Source']:
         with transaction.manager:
             vss = Data()
             print('{} ...'.format(src))
-            for row in db.query(
+            for row in iter_rows(
+                db,
+                'formtable',
                 "select f.* from formtable as f, formtable_sourcetable as s "
                 "where s.formtable_cldf_id = f.cldf_id and s.sourcetable_id = ?",
                 (src,)
             ):
-                row = dict(zip(formcols, row))
                 vsid = (src, row['cldf_languageReference'], row['cldf_parameterReference'])
                 vs = vss['ValueSet'].get(vsid)
                 if not vs:
@@ -156,6 +178,7 @@ def main(args):
                     sound = bipa[s]
                     if isinstance(sound, Sound):
                         sounds[s] = sound.name
+                        segments[row['cldf_languageReference']].update([str(sound)])
                 DBSession.add(Form(
                     id=row['cldf_id'],
                     name=row['cldf_form'],
@@ -168,6 +191,9 @@ def main(args):
                     valueset=vs))
 
     with transaction.manager:
+        for lid, segs in segments.items():
+            common.Language.get(lid).jsondata = dict(inventory=segs)
+
         glottolog_repos = Path(
             lexibank.__file__).parent.parent.parent.parent.joinpath('glottolog', 'glottolog')
         load_families(

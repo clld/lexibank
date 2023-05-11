@@ -90,13 +90,7 @@ class Counterparts(Values):
                     'concept',
                     model_col=Concept.name,
                     get_object=lambda i: i.valueset.parameter),
-                Col(self, 'variety', model_col=Form.variety_name),
-                LinkCol(
-                    self,
-                    'provider',
-                    model_col=Contribution.name,
-                    get_object=lambda i: i.valueset.contribution),
-                RefsCol(self, 'source'),
+                Col(self, 'Segments', model_col=Form.segments),
             ]
         return [
             LinkCol(self, 'form', model_col=Value.name),

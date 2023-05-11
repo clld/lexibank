@@ -1,3 +1,4 @@
+import math
 from itertools import groupby
 
 from sqlalchemy import func, desc, text
@@ -41,6 +42,39 @@ def contribution_detail_html(context=None, request=None, **kw):
         .filter(Language.pk.in_(context.jsondata['language_pks']))\
         .options(joinedload(LexibankLanguage.family))
     return {'map': SelectedLanguagesMap(context, request, list(langs))}
+
+
+def language_detail_html(context=None, request=None, **kw):
+    from pyclts.ipachart import VowelTrapezoid, PulmonicConsonants, Segment
+
+    def color(freq, maxfreq):
+        hexnum = hex(math.floor(128 - freq / maxfreq * 127)).upper().replace('0X', '')
+        return 'c' + hexnum, '#{0}{0}{0}'.format(hexnum)
+
+    colorspec = {}
+    maxfreq = max(context.jsondata['inventory'].values())
+    for freq in context.jsondata['inventory'].values():
+        cls, col = color(freq, maxfreq)
+        colorspec[cls] = (col, None)
+
+    bipa = DBSession.query(Config).filter(Config.key=='bipa_mapping').one().jsondata
+    inventory = [
+        Segment(
+            sound_bipa=v,
+            sound_name=bipa[v],
+            href='https://clts.clld.org/parameters/{}'.format(bipa[v].replace(' ', '_')),
+            css_class=color(freq, maxfreq)[0],
+        ) for v, freq in context.jsondata['inventory'].items()]
+
+    res = {}
+    d = VowelTrapezoid()
+    covered = d.fill_slots(inventory)
+    res['vowels_html'], res['vowels_css'] = d.render(colorspec=colorspec)
+    d = PulmonicConsonants()
+    covered = covered.union(d.fill_slots(inventory))
+    res['consonants_html'], res['consonants_css'] = d.render(colorspec=colorspec)
+    res['uncovered'] = [p for i, p in enumerate(inventory) if i not in covered]
+    return res
 
 
 def dataset_detail_html(context=None, request=None, **kw):
