@@ -6,16 +6,7 @@
 <%def name="sidebar()">
     <div class="well">
        <h3>Dataset</h3>
-        <dl>
-            <dt>CLDF dataset:</dt>
-            <dd>Zenodo: <a href="https://doi.org/${ctx.valueset.contribution.doi}">${ctx.valueset.contribution.doi}</a></dd>
-            <dd>GitHub:
-                <a href="https://doi.org/${ctx.valueset.contribution.url}">${'/'.join(ctx.valueset.contribution.url.split('/')[-2:])}</a>
-                [${ctx.valueset.contribution.version}]
-            </dd>
-            <dt>Source:</dt>
-            <dd>${h.link(request, ctx.valueset.contribution.source)}</dd>
-        </dl>
+        ${u.dataset_provenance(req, ctx.valueset.contribution)|n}
     </div>
 </%def>
 
@@ -23,16 +14,19 @@
 
 
 <dl>
-        <dt>Language:</dt>
+        <dt>Variety:</dt>
         <dd>${h.link(request, ctx.valueset.language)} [${ctx.valueset.language.name}]</dd>
     % if ctx.valueset.language.glottocode:
-        <dd>Glottolog: ${u.glottolog.link(req, id=ctx.valueset.language.glottocode, label=ctx.valueset.language.glottocode)}</dd>
+        <dt>Glottolog:</dt>
+        <dd>${u.glottolog.link(req, id=ctx.valueset.language.glottocode, label=ctx.valueset.language.glottocode)}</dd>
     % endif
         <dt>Concept:</dt>
         <dd>${h.link(request, ctx.valueset.parameter)}</dd>
-        <dd>Concepticon conceptset: ${u.concepticon.link(request, ctx.valueset.parameter.id, label=ctx.valueset.parameter.name)}</dd>
+        <dt>Concepticon conceptset:</dt>
+        <dd>${u.concepticon_link(request, ctx.valueset.parameter, label=ctx.valueset.parameter.name)}</dd>
     % if ctx.valueset.parameter.clics_url:
-        <dd>CLICS cluster: <a href="${ctx.valueset.parameter.clics_url}">${ctx.valueset.parameter.central_concept}</a></dd>
+        <dt>CLICS cluster:</dt>
+        <dd>${u.clics_link(req, ctx.valueset.parameter, label=ctx.valueset.parameter.central_concept)}</dd>
     % endif
         <dt>Segments:</dt>
     % if ctx.profile:

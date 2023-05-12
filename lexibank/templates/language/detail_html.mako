@@ -38,16 +38,7 @@
 ${util.codes()}
 <div style="clear: both;" class="well">
     <h3>Dataset</h3>
-    <dl>
-        <dt>CLDF dataset:</dt>
-        <dd>Zenodo: <a href="https://doi.org/${ctx.contribution.doi}">${ctx.contribution.doi}</a></dd>
-        <dd>GitHub:
-            <a href="https://doi.org/${ctx.contribution.url}">${'/'.join(ctx.contribution.url.split('/')[-2:])}</a>
-            [${ctx.contribution.version}]
-        </dd>
-        <dt>Source:</dt>
-        <dd>${h.link(request, ctx.contribution.source)}</dd>
-    </dl>
+    ${u.dataset_provenance(req, ctx.contribution)|n}
 </div>
 <div class="well">
     % if ctx.latitude is not None:
@@ -57,7 +48,7 @@ ${util.codes()}
 </div>
 </%def>
 
-<h2>${_('Language')} ${ctx.name}</h2>
+<h2>Variety ${ctx.name} (${ctx.family.name if ctx.family else 'isolate'})</h2>
 
 
 <div class="tabbable">

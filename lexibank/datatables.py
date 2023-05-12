@@ -2,37 +2,19 @@ from sqlalchemy.orm import joinedload
 
 from clld.db.meta import DBSession
 from clld.db.models.common import Value, Contribution, ValueSet, Parameter, Language
-from clld.web.util.helpers import external_link, linked_references
-
-from clld.web.datatables.base import Col, IdCol, LinkCol, LinkToMapCol, DataTable
+from clld.web.datatables.base import Col, IdCol, LinkCol, LinkToMapCol
 from clld.web.datatables.language import Languages
 from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
 from clld.web.datatables.contribution import Contributions
 from clld.web.util import concepticon
-
 from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyCol
 from clld_glottologfamily_plugin.models import Family
 
 from lexibank.models import LexibankLanguage, Form, Concept, LexibankDataset
 
 
-class MaybeLinkCol(LinkCol):
-    def format(self, item):
-        obj = self.get_obj(item)
-        if obj:
-            return LinkCol.format(self, item)
-        return ''
-
-
-class RefsCol(Col):
-    __kw__ = dict(bSearchable=False, bSortable=False)
-
-    def format(self, item):
-        return linked_references(self.dt.req, item)
-
-
-class Counterparts(Values):
+class Words(Values):
     def base_query(self, query):
         query = query.join(ValueSet).options(
             joinedload(Value.valueset).joinedload(ValueSet.contribution),
@@ -55,7 +37,10 @@ class Counterparts(Values):
             return query.filter(ValueSet.parameter_pk == self.parameter.pk)
 
         if self.contribution:
-            query = query.join(ValueSet.parameter)
+            query = query.join(ValueSet.parameter).join(ValueSet.language)\
+                .options(
+                    joinedload(Value.valueset).joinedload(ValueSet.language),
+                    joinedload(Value.valueset).joinedload(ValueSet.parameter))
             return query.filter(ValueSet.contribution_pk == self.contribution.pk)
 
         return query \
@@ -67,7 +52,18 @@ class Counterparts(Values):
             )
 
     def col_defs(self):
+        famcol = FamilyCol(self, 'family', LexibankLanguage, get_object=lambda i: i.valueset.language)
+
         if self.parameter:
+            famcol.choices = sorted(
+                {
+                    (vs.language.family.id, vs.language.family.name) for vs in
+                    DBSession.query(ValueSet)
+                    .join(ValueSet.language)
+                    .join(LexibankLanguage.family)
+                    .filter(ValueSet.parameter==self.parameter)
+                    .options(joinedload(ValueSet.language).joinedload(LexibankLanguage.family))},
+                key=lambda i: i[1])
             return [
                 LinkCol(self, 'form', model_col=Form.name),
                 LinkCol(
@@ -75,12 +71,35 @@ class Counterparts(Values):
                     'language',
                     model_col=LexibankLanguage.name,
                     get_object=lambda i: i.valueset.language),
-                MaybeLinkCol(
-                    self,
-                    'family',
-                    model_col=Family.name,
-                    get_object=lambda i: i.valueset.language.family),
+                famcol,
             ]
+
+        if self.contribution:
+            famcol.choices = sorted(
+                {
+                    (vs.language.family.id, vs.language.family.name) for vs in
+                    DBSession.query(ValueSet)
+                    .join(ValueSet.language)
+                    .join(LexibankLanguage.family)
+                    .filter(ValueSet.contribution==self.contribution)
+                    .options(joinedload(ValueSet.language).joinedload(LexibankLanguage.family))},
+                key=lambda i: i[1])
+            return [
+                LinkCol(self, 'form', model_col=Form.name),
+                LinkCol(
+                    self,
+                    'concept',
+                    model_col=Concept.name,
+                    get_object=lambda i: i.valueset.parameter),
+                Col(self, 'Segments', model_col=Form.segments),
+                LinkCol(
+                    self,
+                    'language',
+                    model_col=LexibankLanguage.name,
+                    get_object=lambda i: i.valueset.language),
+                famcol,
+            ]
+
         if self.language:
             return [
                 LinkCol(self, 'form', model_col=Form.name),
@@ -98,11 +117,10 @@ class Counterparts(Values):
                 'language',
                 model_col=Language.name,
                 get_object=lambda i: i.valueset.language),
-            MaybeLinkCol(
+            FamilyCol(
                 self,
-                'family',
-                model_col=Family.name,
-                get_object=lambda i: i.valueset.language.family),
+                'family', LexibankLanguage,
+                get_object=lambda i: i.valueset.language),
             LinkCol(
                 self,
                 'concept',
@@ -114,15 +132,6 @@ class Counterparts(Values):
             Col(self, 'Dolgopolsky', model_col=Form.Dolgo_Sound_Classes),
             Col(self, 'SCA', model_col=Form.SCA_Sound_Classes),
         ]
-
-
-#class FeatureIdCol(IdCol):
-#    def search(self, qs):
-#        if self.model_col:
-#            return self.model_col.contains(qs)
-
-#    def order(self):
-#        return Feature.sortkey_str, Feature.sortkey_int
 
 
 class LanguageIdCol(LinkCol):
@@ -215,4 +224,4 @@ def includeme(config):
     config.register_datatable('languages', LexibankLanguages)
     config.register_datatable('contributions', Datasets)
     config.register_datatable('parameters', Concepts)
-    config.register_datatable('values', Counterparts)
+    config.register_datatable('values', Words)

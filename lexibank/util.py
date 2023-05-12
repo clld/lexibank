@@ -1,20 +1,19 @@
 import math
-from itertools import groupby
 
-from sqlalchemy import func, desc, text
 from sqlalchemy.orm import joinedload
-from clld_glottologfamily_plugin.models import Family
 from clld import RESOURCES
 from clld.db.meta import DBSession
-from clld.db.models.common import Language, Value, ValueSet, Config
+from clld.db.models.common import Language, Config
 from clld.web.util.htmllib import HTML, literal
-from clld.web.maps import SelectedLanguagesMap
 from clld.web.util import glottolog
 from clld.web.util import concepticon
+from clld.web.util.helpers import link
 
 from lexibank.models import LexibankLanguage
+from lexibank.maps import DatasetLanguagesMap
 
 
+assert glottolog and concepticon
 #
 # FIXME:
 #  CLICS-link
@@ -42,6 +41,25 @@ def clics_link(request, concept, label=None):
             href=concept.clics_url)
 
 
+def dataset_provenance(req, contribution, with_conceptlists=False):
+    dl = [
+        HTML.dt('Zenodo:'),
+        HTML.dd(HTML.a(contribution.doi, href="https://doi.org/{}".format(contribution.doi))),
+        HTML.dt('GitHub:'),
+        HTML.dd(HTML.a('/'.join(contribution.url.split('/')[-2:]),
+                       href="{}/tree/{}".format(contribution.url, contribution.version)),
+                literal('&nbsp;[' + contribution.version + ']')),
+        HTML.dt('Source:'),
+        HTML.dd(HTML.blockquote(contribution.source.bibtex().text()))
+    ]
+    if with_conceptlists:
+        for i, cl in enumerate(contribution.jsondata['conceptlists']):
+            if i == 0:
+                dl.append(HTML.dt('Conceptlists:'))
+            dl.append(HTML.dd(concepticon.link(req, id=cl, obj_type='ConceptList', label=cl)))
+    return HTML.div(link(req, contribution, label=contribution.name), HTML.dl(*dl))
+
+
 def value_detail_html(context=None, request=None, **kw):
     bipa = DBSession.query(Config).filter(Config.key=='bipa_mapping').one().jsondata
     return {'segments': [(s, bipa.get(s)) for s in context.segments.split()]}
@@ -51,7 +69,7 @@ def contribution_detail_html(context=None, request=None, **kw):
     langs = DBSession.query(Language)\
         .filter(LexibankLanguage.contribution==context)\
         .options(joinedload(LexibankLanguage.family))
-    return {'map': SelectedLanguagesMap(context, request, list(langs))}
+    return {'map': DatasetLanguagesMap(context, request, list(langs))}
 
 
 def language_detail_html(context=None, request=None, **kw):

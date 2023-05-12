@@ -4,7 +4,7 @@ from pyramid.config import Configurator
 from clld_glottologfamily_plugin.util import LanguageByFamilyMapMarker
 from clld.interfaces import IValue, IValueSet, IMapMarker, ICtxFactoryQuery
 from clld.web.app import CtxFactoryQuery
-from clld.db.models.common import Contribution, ValueSet, Value
+from clld.db.models.common import Contribution
 
 # we must make sure custom models are known at database initialization!
 from lexibank import models

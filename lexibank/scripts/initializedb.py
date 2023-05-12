@@ -1,13 +1,10 @@
-import collections
 import pathlib
 import itertools
-from collections import defaultdict
+import collections
 
 import transaction
 from pycldf.db import Database
 from csvw.dsv import reader
-from sqlalchemy import func
-from sqlalchemy.orm import joinedload
 from clld.cliutil import Data, bibtex2source
 from clld.db.meta import DBSession
 from clld.db.models import common
@@ -15,8 +12,6 @@ from clld.lib.bibtex import EntryType
 from clld_glottologfamily_plugin.util import load_families
 from clldutils.path import Path, git_describe
 from clldutils.jsonlib import load
-from pyglottolog.api import Glottolog
-from pyconcepticon.api import Concepticon
 from pyclts import CLTS
 from pyclts.models import Sound
 from nameparser import HumanName
@@ -241,7 +236,4 @@ def main(args):
 
 
 def prime_cache(args):
-    """If data needs to be denormalized for lookup, do that here.
-    This procedure should be separate from the db initialization, because
-    it will have to be run periodically whenever data has been updated.
-    """
+    pass

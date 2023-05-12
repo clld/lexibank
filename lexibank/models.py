@@ -1,29 +1,18 @@
-from uuid import uuid1
 import urllib.parse
 
 from zope.interface import implementer
 from sqlalchemy import (
     Column,
     Integer,
-    Float,
     Unicode,
-    String,
-    Boolean,
     ForeignKey,
 )
 from sqlalchemy.orm import relationship
 
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
-from clld.db.models.common import (
-    Language, Parameter, Contribution, Value, HasSourceMixin,
-)
-
+from clld.db.models.common import Language, Parameter, Contribution, Value, HasSourceMixin
 from clld_glottologfamily_plugin.models import HasFamilyMixin
-
-
-def uuid():
-    return uuid1().urn.split(':')[2]
 
 
 @implementer(interfaces.IContribution)

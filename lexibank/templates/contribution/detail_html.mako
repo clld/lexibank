@@ -4,29 +4,36 @@
 
 <%def name="sidebar()">
 <div class="well">
-<dl>
-    <dt>CLDF dataset:</dt>
-    <dd>${ctx.name}</dd>
-    <dd>Zenodo: <a href="https://doi.org/${ctx.doi}">${ctx.doi}</a></dd>
-    <dd>GitHub:
-        <a href="https://doi.org/${ctx.url}">${'/'.join(ctx.url.split('/')[-2:])}</a>
-        [${ctx.version}]
-    </dd>
-    <dt>Source:</dt>
-    <dd>${ctx.source.bibtex().text()}</dd>
-    % if ctx.jsondata['conceptlists']:
-        <dt>Concept lists:</dt>
-        % for cl in ctx.jsondata['conceptlists']:
-            <dd>${u.concepticon.link(req, id=cl, obj_type='ConceptList', label=cl)}</dd>
-        % endfor
-    % endif
-</dl>
+    <h3>CLDF Dataset</h3>
+    ${u.dataset_provenance(req, ctx, with_conceptlists=True)|n}
 </div>
 </%def>
 
-
 <h2>Dataset ${ctx.id}</h2>
 
-${map.render()}
+<div class="tabbable">
+    <ul class="nav nav-tabs">
+        <li class="active"><a href="#languages" data-toggle="tab">Varieties</a></li>
+        <li><a href="#words" data-toggle="tab">Words</a></li>
+    </ul>
+    <div class="tab-content" style="overflow: visible;">
+        <div id="languages" class="tab-pane active">
+            ${map.render()}
 
-${request.get_datatable('languages', h.models.Language, contribution=ctx).render()}
+            ${request.get_datatable('languages', h.models.Language, contribution=ctx).render()}
+        </div>
+        <div id="words" class="tab-pane">
+            ${request.get_datatable('values', h.models.Value, contribution=ctx).render()}
+        </div>
+    </div>
+    <script>
+        $(document).ready(function() {
+            if (location.hash !== '') {
+                $('a[href="#' + location.hash.substr(2) + '"]').tab('show');
+            }
+            return $('a[data-toggle="tab"]').on('shown', function(e) {
+                return location.hash = 't' + $(e.target).attr('href').substr(1);
+            });
+        });
+    </script>
+</div>

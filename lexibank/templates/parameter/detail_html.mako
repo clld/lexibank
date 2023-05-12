@@ -6,10 +6,10 @@
 <%def name="sidebar()">
 <div class="well">
     <dl>
-        <dt>Concepticon:</dt>
+        <dt>Concepticon conceptset:</dt>
         <dd>${u.concepticon_link(req, ctx, label=ctx.name)}</dd>
         % if ctx.central_concept:
-            <dt>CLICS:</dt>
+            <dt>CLICS cluster:</dt>
             <dd>${u.clics_link(req, ctx, label=ctx.central_concept)}</dd>
         % endif
         <dt>Representation:</dt>
