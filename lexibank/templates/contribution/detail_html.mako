@@ -2,35 +2,25 @@
 <%namespace name="util" file="../util.mako"/>
 <%! active_menu_item = "contributions" %>
 
-<h2>${_('Contribution')} ${ctx.name}</h2>
+<%def name="sidebar()">
+<div class="well">
+<dl>
+    <dt>CLDF dataset:</dt>
+    <dd>${ctx.name}</dd>
+    <dd>Zenodo: <a href="https://doi.org/${ctx.doi}">${ctx.doi}</a></dd>
+    <dd>GitHub:
+        <a href="https://doi.org/${ctx.url}">${'/'.join(ctx.url.split('/')[-2:])}</a>
+        [${ctx.version}]
+    </dd>
+    <dt>Source:</dt>
+    <dd>${ctx.source.bibtex().text()}</dd>
+</dl>
+</div>
+</%def>
 
-<small>cite as</small>
-<blockquote>
-    ${ctx.description}
-</blockquote>
-% if ctx.url:
-    <p>Available online at ${h.external_link(ctx.url)}</p>
-% endif
 
-<table class="table table-nonfluid">
-    <tr>
-        <td>Concepts</td>
-        <td class="right">${ctx.parameter_count}</td>
-    </tr>
-    <tr>
-        <td>Lexemes</td>
-        <td class="right">${'{0:,}'.format(ctx.lexeme_count)}</td>
-    </tr>
-    <tr>
-        <td>
-            <span class="hint--bottom" data-hint="${ctx.__class__.__table__._columns['synonym_index'].doc}">Synonymy index</span>
-        </td>
-        <td class="right">${'{0:.2f}'.format(ctx.synonym_index)}</td>
-    </tr>
-</table>
-
-<h3>Languages</h3>
+<h2>Dataset ${ctx.id}</h2>
 
 ${map.render()}
 
-${request.get_datatable('languages', h.models.Language, contribution=ctx) .render()}
+${request.get_datatable('languages', h.models.Language, contribution=ctx).render()}

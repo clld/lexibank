@@ -12,7 +12,6 @@ from sqlalchemy import (
     ForeignKey,
 )
 from sqlalchemy.orm import relationship
-from uritemplate import expand
 
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
@@ -34,15 +33,9 @@ class LexibankDataset(CustomModelMixin, Contribution, HasSourceMixin):
     version = Column(Unicode)
     doi = Column(Unicode)
 
-    language_count = Column(Integer)
-    parameter_count = Column(Integer)
-    lexeme_count = Column(Integer)
-    synonym_index = Column(
-        Float,
-        default=0.0,
-        doc="""A measure how often a dataset provides multiple synonyms for
-a concept in a language. 1 means for each concept in each language at most one counterpart
-is given.""")
+    nconcepts = Column(Integer)
+    nlangs = Column(Integer)
+    nwords = Column(Integer)
 
     def profile_url(self, name):
         return '{}/blob/{}/etc/{}'.format(self.url, self.version, name)
@@ -51,10 +44,12 @@ is given.""")
 @implementer(interfaces.IParameter)
 class Concept(CustomModelMixin, Parameter):
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
-    representation = Column(Integer)
-    semanticfield = Column(Unicode)
     cluster_id = Column(Unicode)
     central_concept = Column(Unicode)
+
+    nwords = Column(Integer)
+    nlangs = Column(Integer)
+    ndatasets = Column(Integer)
 
     @property
     def concepticon_url(self):
@@ -72,7 +67,10 @@ class LexibankLanguage(CustomModelMixin, Language, HasFamilyMixin):
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
     glottocode = Column(Unicode)
     contribution_pk = Column(Integer, ForeignKey('contribution.pk'))
-    contribution = relationship(Contribution)
+    contribution = relationship(Contribution, backref='languages')
+
+    nwords = Column(Integer)
+    nconcepts = Column(Integer)
 
 
 @implementer(interfaces.IValue)

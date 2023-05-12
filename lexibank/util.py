@@ -7,7 +7,7 @@ from clld_glottologfamily_plugin.models import Family
 from clld import RESOURCES
 from clld.db.meta import DBSession
 from clld.db.models.common import Language, Value, ValueSet, Config
-from clld.web.util.htmllib import HTML
+from clld.web.util.htmllib import HTML, literal
 from clld.web.maps import SelectedLanguagesMap
 from clld.web.util import glottolog
 from clld.web.util import concepticon
@@ -18,18 +18,28 @@ from lexibank.models import LexibankLanguage
 #
 # FIXME:
 #  CLICS-link
-#  CLTS-link
 #
 
 
-def concepticon_link(request, concept):
+def concepticon_link(request, concept, label=None):
     return HTML.a(
         HTML.img(
             src=request.static_url('lexibank:static/concepticon_logo.png'),
-            height=20,
-            width=30),
+            width=20),
+        literal('&nbsp;' + label) if label else '',
         title='corresponding concept set at Concepticon',
         href=concept.concepticon_url)
+
+
+def clics_link(request, concept, label=None):
+    if concept.clics_url:
+        return HTML.a(
+            HTML.img(
+                src=request.static_url('lexibank:static/clics.svg'),
+                width=20),
+            literal('&nbsp;' + label) if label else '',
+            title='corresponding infomap cluster in CLICS3',
+            href=concept.clics_url)
 
 
 def value_detail_html(context=None, request=None, **kw):
@@ -39,7 +49,7 @@ def value_detail_html(context=None, request=None, **kw):
 
 def contribution_detail_html(context=None, request=None, **kw):
     langs = DBSession.query(Language)\
-        .filter(Language.pk.in_(context.jsondata['language_pks']))\
+        .filter(LexibankLanguage.contribution==context)\
         .options(joinedload(LexibankLanguage.family))
     return {'map': SelectedLanguagesMap(context, request, list(langs))}
 
@@ -78,12 +88,6 @@ def language_detail_html(context=None, request=None, **kw):
 
 
 def dataset_detail_html(context=None, request=None, **kw):
-    families = DBSession.query(Family.id, Family.name, func.count(LexibankLanguage.id).label('c'))\
-        .join(LexibankLanguage)\
-        .group_by(Family.id, Family.name)\
-        .order_by(desc(text('c')))
-
     return dict(
-        families=families,
-        stats=context.get_stats([rsc for rsc in RESOURCES if rsc.name in [
-            'language', 'family', 'cognateset', 'contribution', 'value', 'parameter']]))
+        stats=context.get_stats(
+            [rsc for rsc in RESOURCES if rsc.name in ['language', 'parameter', 'value', 'contribution']]))

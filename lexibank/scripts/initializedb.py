@@ -20,6 +20,8 @@ from pyconcepticon.api import Concepticon
 from pyclts import CLTS
 from pyclts.models import Sound
 from nameparser import HumanName
+from cldfcatalog import Repository
+from cldfzenodo.oai import iter_records
 
 import lexibank
 from lexibank.models import LexibankLanguage, Concept, LexibankDataset, Form
@@ -39,13 +41,14 @@ def iter_rows(db, table, query, params=None):
 
 
 def main(args):
-    from cldfcatalog import Repository
-
     bipa = CLTS(pathlib.Path('/home/robert/projects/cldf-clts/clts-data')).bipa
 
     cldf = args.cldf
     db = Database(cldf, fname=cldf.directory / '..' / 'lexibank.sqlite')
     clusters = {row['CONCEPTICON_ID']: row for row in reader(CLICS_LIST, delimiter='\t', dicts=True)}
+
+    zenodo = {rec.doi: rec for rec in iter_records('lexibank')}
+    c2con = {}
 
     with transaction.manager:
         data = Data()
@@ -75,11 +78,14 @@ def main(args):
             c = data.add(common.Contributor, n.last, id=n.last, name=name)
             DBSession.add(common.Editor(contributor=c, dataset=dataset, ord=i))
 
-        # ID>-----Organization>---Dataset>Source>-Zenodo>-Todo>---ClicsCore>------LexiCore>-------CogCore>ProtoCore>------Version
         contribs = {
             row['Source']: row for row in reader(
                 cldf.directory / '..' / 'etc' / 'lexibank-bliss.tsv', delimiter='\t', dicts=True)
         }
+        for c in contribs.values():
+            assert c['Zenodo'] in zenodo, 'DOI: {}'.format(c)
+            assert zenodo[c['Zenodo']].version == c['Version'], 'Version: {}'.format(c)
+            c['Title'] = zenodo[c['Zenodo']].title
 
         profiles = collections.defaultdict(dict)
 
@@ -103,14 +109,16 @@ def main(args):
             except ValueError:
                 src.genre = EntryType.misc
             source = data.add(common.Source, row[0], _obj=bibtex2source(src))
-            p = data.add(
+            md = load(d / 'metadata.json')
+            data.add(
                 LexibankDataset, row[0],
-                id=row[0],
-                name='{}. {}. {}'.format(src.get('author') or src.get('editor'), src['year'], src['title']),
+                id=contrib['ID'],
+                name=contrib['Title'],
                 url=Repository(d).url,
                 version=contrib['Version'],
                 doi=contrib['Zenodo'],
                 source=source,
+                jsondata=dict(conceptlists=[md['conceptlist']] if isinstance(md['conceptlist'], str) else md['conceptlist']),
             )
 
         l2ds = {
@@ -133,6 +141,7 @@ def main(args):
                 glottocode=row['cldf_glottocode'])
 
         for row in cldf.iter_rows('ParameterTable'):
+            c2con[row['ID']] = row['Concepticon_ID']
             cluster = clusters.get(row['Concepticon_ID'])
             data.add(
                 Concept, row['ID'],
@@ -147,50 +156,76 @@ def main(args):
 
     segments = collections.defaultdict(collections.Counter)
     sounds = {}
+    concepts = collections.defaultdict(lambda: dict(nwords=0, datasets=set(), languages=set()))
     for src in data['Source']:
         with transaction.manager:
             vss = Data()
             print('{} ...'.format(src))
-            for row in iter_rows(
-                db,
-                'formtable',
-                "select f.* from formtable as f, formtable_sourcetable as s "
-                "where s.formtable_cldf_id = f.cldf_id and s.sourcetable_id = ?",
-                (src,)
-            ):
-                vsid = (src, row['cldf_languageReference'], row['cldf_parameterReference'])
-                vs = vss['ValueSet'].get(vsid)
-                if not vs:
-                    vs = vss.add(
-                        common.ValueSet,
-                        vsid,
-                        id='{}-{}-{}'.format(*vsid),
-                        language_pk=data['LexibankLanguage'][row['cldf_languageReference']],
-                        parameter_pk=data['Concept'][row['cldf_parameterReference']],
-                        contribution_pk=data['LexibankDataset'][src],
-                    )
-                profile = None
-                if row['cldf_languageReference'].split('-')[1] in profiles[src]:
-                    profile = profiles[src][row['cldf_languageReference'].split('-')[1]]
-                elif None in profiles[src]:
-                    profile = profiles[src][None]
-                for s in row['cldf_segments'].split():
-                    sound = bipa[s]
-                    if isinstance(sound, Sound):
-                        sounds[s] = sound.name
-                        segments[row['cldf_languageReference']].update([str(sound)])
-                DBSession.add(Form(
-                    id=row['cldf_id'],
-                    name=row['cldf_form'],
-                    segments=row['cldf_segments'],
-                    profile=profile,
-                    CV_Template=row['CV_Template'],
-                    Prosodic_String=row['Prosodic_String'],
-                    Dolgo_Sound_Classes=row['Dolgo_Sound_Classes'],
-                    SCA_Sound_Classes=row['SCA_Sound_Classes'],
-                    valueset=vs))
+            dscids, dsnwords = set(), 0
+            for nlangs, (lid, rows) in enumerate(itertools.groupby(
+                iter_rows(
+                    db,
+                    'formtable',
+                    "select f.* from formtable as f, formtable_sourcetable as s "
+                    "where s.formtable_cldf_id = f.cldf_id and s.sourcetable_id = ? order by f.cldf_languageReference",
+                    (src,)),
+                lambda r: r['cldf_languageReference']
+            ), start=1):
+                cids = set()
+                for nwords, row in enumerate(rows, start=1):
+                    cid = row['cldf_parameterReference']
+                    concepts[cid]['nwords'] += 1
+                    concepts[cid]['datasets'].add(src)
+                    concepts[cid]['languages'].add(lid)
+                    cids.add(cid)
+                    vsid = (src, lid, cid)
+                    vs = vss['ValueSet'].get(vsid)
+                    if not vs:
+                        vs = vss.add(
+                            common.ValueSet,
+                            vsid,
+                            id='{}-{}-{}'.format(*vsid),
+                            language_pk=data['LexibankLanguage'][lid],
+                            parameter_pk=data['Concept'][cid],
+                            contribution_pk=data['LexibankDataset'][src],
+                        )
+                    profile = None
+                    if lid.split('-')[1] in profiles[src]:
+                        profile = profiles[src][lid.split('-')[1]]
+                    elif None in profiles[src]:
+                        profile = profiles[src][None]
+                    for s in row['cldf_segments'].split():
+                        sound = bipa[s]
+                        if isinstance(sound, Sound):
+                            sounds[s] = sound.name
+                            segments[lid].update([str(sound)])
+                    DBSession.add(Form(
+                        id=row['cldf_id'],
+                        name=row['cldf_form'],
+                        segments=row['cldf_segments'],
+                        profile=profile,
+                        CV_Template=row['CV_Template'],
+                        Prosodic_String=row['Prosodic_String'],
+                        Dolgo_Sound_Classes=row['Dolgo_Sound_Classes'],
+                        SCA_Sound_Classes=row['SCA_Sound_Classes'],
+                        valueset=vs))
+                lang = LexibankLanguage.get(lid)
+                lang.nwords = nwords
+                lang.nconcepts = len(cids)
+                dscids |= cids
+                dsnwords += nwords
+            ds = LexibankDataset.get(data['LexibankDataset'][src])
+            ds.nwords = dsnwords
+            ds.nlangs = nlangs
+            ds.nconcepts = len(dscids)
 
     with transaction.manager:
+        for cid, data in concepts.items():
+            c = Concept.get(c2con[cid])
+            c.nwords = data['nwords']
+            c.ndatasets = len(data['datasets'])
+            c.nlangs = len(data['languages'])
+
         for lid, segs in segments.items():
             common.Language.get(lid).jsondata = dict(inventory=segs)
 
@@ -203,31 +238,6 @@ def main(args):
             strict=False,
             isolates_icon='tcccccc')
         DBSession.add(common.Config(key='bipa_mapping', jsondata=sounds))
-    return
-
-    languoids = {l.id: l for l in Glottolog(glottolog_repos).languoids()}
-    concepticon = Concepticon(
-        Path(lexibank.__file__).parent.parent.parent.parent.joinpath('concepticon', 'concepticon-data'))
-    conceptsets = {c.id: c for c in concepticon.conceptsets.values()}
-
-    skip = True
-    for dname in sorted(repos.joinpath('datasets').iterdir(), key=lambda p: p.name):
-        #if dname.name == 'benuecongo':
-        #    skip = False
-        #if skip:
-        #    continue
-        if dname.is_dir() and dname.name != '_template':
-            mdpath = dname.joinpath('cldf', 'metadata.json')
-            if mdpath.exists():
-                print(dname.name)
-                import_cldf(dname, load(mdpath), languoids, conceptsets)
-
-    with transaction.manager:
-        load_families(
-            Data(),
-            DBSession.query(LexibankLanguage),
-            glottolog_repos=glottolog_repos,
-            isolates_icon='tcccccc')
 
 
 def prime_cache(args):
@@ -235,25 +245,3 @@ def prime_cache(args):
     This procedure should be separate from the db initialization, because
     it will have to be run periodically whenever data has been updated.
     """
-    for concept in DBSession.query(Concept):
-        concept.representation = DBSession.query(common.Language)\
-            .join(common.ValueSet)\
-            .filter(common.ValueSet.parameter_pk == concept.pk)\
-            .distinct()\
-            .count()
-
-    for prov in DBSession.query(LexibankDataset):
-        q = DBSession.query(common.ValueSet.language_pk)\
-            .filter(common.ValueSet.contribution_pk == prov.pk)\
-            .distinct()
-        prov.language_count = q.count()
-        prov.update_jsondata(language_pks=[r[0] for r in q])
-
-        prov.parameter_count = DBSession.query(common.ValueSet.parameter_pk) \
-            .filter(common.ValueSet.contribution_pk == prov.pk) \
-            .distinct() \
-            .count()
-        prov.lexeme_count = DBSession.query(common.Value.pk)\
-            .join(common.ValueSet)\
-            .filter(common.ValueSet.contribution_pk == prov.pk)\
-            .count()

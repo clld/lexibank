@@ -3,13 +3,31 @@
 <%! active_menu_item = "parameters" %>
 <%block name="title">${_('Parameter')} ${ctx.name}</%block>
 
-<h2>${_('Parameter')} ${ctx.name} ${u.concepticon_link(request, ctx)}</h2>
-<div>
-    ${h.alt_representations(req, ctx, doc_position='right', exclude=['snippet.html'])|n}
-    % if ctx.description:
-        <div class="alert alert-info">${ctx.description}</div>
-    % endif
+<%def name="sidebar()">
+<div class="well">
+    <dl>
+        <dt>Concepticon:</dt>
+        <dd>${u.concepticon_link(req, ctx, label=ctx.name)}</dd>
+        % if ctx.central_concept:
+            <dt>CLICS:</dt>
+            <dd>${u.clics_link(req, ctx, label=ctx.central_concept)}</dd>
+        % endif
+        <dt>Representation:</dt>
+        <dd>
+            <table class="table-condensed table-nonfluid">
+                <tbody>
+                <tr><th style="text-align: left;">Datasets:</th><td style="text-align: right;">${ctx.ndatasets}</td></tr>
+                <tr><th style="text-align: left;">Languages:</th><td style="text-align: right;">${ctx.nlangs}</td></tr>
+                <tr><th style="text-align: left;">Words:</th><td style="text-align: right;">${ctx.nwords}</td></tr>
+                </tbody>
+            </table>
+        </dd>
+    </dl>
 </div>
+</%def>
+
+
+<h2>${_('Parameter')} ${ctx.name}</h2>
 
 % if map_ or request.map:
 ${(map_ or request.map).render()}
