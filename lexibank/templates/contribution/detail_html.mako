@@ -14,6 +14,12 @@
     </dd>
     <dt>Source:</dt>
     <dd>${ctx.source.bibtex().text()}</dd>
+    % if ctx.jsondata['conceptlists']:
+        <dt>Concept lists:</dt>
+        % for cl in ctx.jsondata['conceptlists']:
+            <dd>${u.concepticon.link(req, id=cl, obj_type='ConceptList', label=cl)}</dd>
+        % endfor
+    % endif
 </dl>
 </div>
 </%def>
