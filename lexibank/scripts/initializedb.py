@@ -143,7 +143,7 @@ def main(args):
                 id=row['Concepticon_ID'],
                 name=row['Name'],
                 cluster_id=cluster['COMMUNITY'] if cluster else None,
-                central_concept=cluster['CENTRAL_CONCEPT'] if cluster else None)
+                central_concept=(cluster['CENTRAL_CONCEPT'] or None) if cluster else None)
 
         DBSession.flush()
         for key in data:
