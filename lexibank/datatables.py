@@ -128,9 +128,9 @@ class Words(Values):
                 get_object=lambda i: i.valueset.parameter),
             Col(self, 'Central_concept', model_col=Concept.central_concept, get_object=lambda i: i.valueset.parameter),
             Col(self, 'Segments', model_col=Form.segments),
-            Col(self, 'CV_Template', model_col=Form.CV_Template),
-            Col(self, 'Dolgopolsky', model_col=Form.Dolgo_Sound_Classes),
-            Col(self, 'SCA', model_col=Form.SCA_Sound_Classes),
+            Col(self, 'CV_Template', sTitle='CV template', model_col=Form.CV_Template),
+            Col(self, 'Dolgopolsky', sTitle='Dolgopolsky', model_col=Form.Dolgo_Sound_Classes),
+            Col(self, 'SCA', sTitle='SCA', model_col=Form.SCA_Sound_Classes),
         ]
 
 

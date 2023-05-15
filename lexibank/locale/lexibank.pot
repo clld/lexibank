@@ -1,18 +1,17 @@
-# English translations for lexibank.
-# Copyright (C) 2015 ORGANIZATION
+# Translations template for lexibank.
+# Copyright (C) 2023 ORGANIZATION
 # This file is distributed under the same license as the lexibank project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2015.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
 #
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: lexibank 0.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2023-05-15 10:00+0200\n"
-"PO-Revision-Date: 2015-09-03 10:39+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: en\n"
-"Language-Team: en <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -20,41 +19,41 @@ msgstr ""
 
 #: lexibank/__init__.py:14
 msgid "Parameter"
-msgstr "Concept"
+msgstr ""
 
 #: lexibank/__init__.py:15
 msgid "Parameters"
-msgstr "Concepts"
+msgstr ""
 
 #: lexibank/__init__.py:16
 msgid "Contribution"
-msgstr "Dataset"
+msgstr ""
 
 #: lexibank/__init__.py:17
 msgid "Contributions"
-msgstr "Datasets"
+msgstr ""
 
 #: lexibank/__init__.py:18
 msgid "Value"
-msgstr "Word"
+msgstr ""
 
 #: lexibank/__init__.py:19
 msgid "Values"
-msgstr "Words"
+msgstr ""
 
 #: lexibank/__init__.py:20
 msgid "Valueset"
-msgstr "Synonym set"
+msgstr ""
 
 #: lexibank/__init__.py:21
 msgid "Valuesets"
-msgstr "Synonym sets"
+msgstr ""
 
 #: lexibank/__init__.py:22
 msgid "Language"
-msgstr "Variety"
+msgstr ""
 
 #: lexibank/__init__.py:23
 msgid "Languages"
-msgstr "Varieties"
+msgstr ""
 

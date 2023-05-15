@@ -19,6 +19,8 @@ _('Value')
 _('Values')
 _('Valueset')
 _('Valuesets')
+_('Language')
+_('Languages')
 
 
 class LexibankCtxFactoryQuery(CtxFactoryQuery):
