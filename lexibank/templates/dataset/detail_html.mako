@@ -37,7 +37,7 @@
 </ul>
 
 <h3>How to cite Lexibank</h3>
-<p>Please cite th Lexibank paper</p>
+<p>Please cite the Lexibank paper</p>
 <blockquote>
     List, JM., Forkel, R., Greenhill, S.J. et al. Lexibank, a public repository of standardized wordlists with computed phonological and lexical features. Sci Data 9, 316 (2022). <a href="https://doi.org/10.1038/s41597-022-01432-0">DOI: 10.1038/s41597-022-01432-0</a>
 </blockquote>
