@@ -30,6 +30,11 @@
     </ul>
 </div>
 
+<div class="alert alert-success">
+    <a class="btn" title="To be able to come back to a search you did on Lexibank, bookmark the URL displayed after clicking." onclick="LEXIBANK.search_url('surl');">Get URL for current search</a>
+    <span style="margin-left: 1em;" id="surl"> </span>
+</div>
+
 <div>
     ${ctx.render()}
 </div>
