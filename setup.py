@@ -20,11 +20,11 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'pyclts',
+        'pyclts>=4.0.2',
         'clld>=10',
         'clldmpg>=4.2',
         'clld-glottologfamily-plugin>=2.0.1',
-        'clld-ipachart-plugin',
+        'clld-ipachart-plugin>=1.0',
         'pycldf',
         'sqlalchemy',
         'waitress',
