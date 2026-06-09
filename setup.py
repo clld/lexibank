@@ -24,9 +24,11 @@ setup(
         'clld>=10',
         'clldmpg>=4.2',
         'clld-glottologfamily-plugin>=2.0.1',
+        'clld-ipachart-plugin',
         'pycldf',
         'sqlalchemy',
         'waitress',
+        'matplotlib',
     ],
     extras_require={
         'dev': [

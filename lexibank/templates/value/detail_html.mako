@@ -28,10 +28,7 @@
     <dd>${u.clics_link(req, ctx.valueset.parameter, label=ctx.valueset.parameter.central_concept)}</dd>
     % endif
     <dt>Segments:</dt>
-    % if ctx.profile:
-    <dd>Orthography profile: <a href="${ctx.valueset.contribution.profile_url(ctx.profile)}">${ctx.profile}</a></dd>
-    % endif
-</dl>
+    <dd>
 <table class="table table-nonfluid table-condensed">
     <thead>
     <tr>
@@ -87,3 +84,5 @@
     </tr>
     </tbody>
 </table>
+    </dd>
+</dl>

@@ -3,32 +3,32 @@ import itertools
 import collections
 
 import transaction
-from pycldf.db import Database
+from pycldf import Database, Dataset
 from csvw.dsv import reader
 from clld.cliutil import Data, bibtex2source
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib.bibtex import EntryType
 from clld_glottologfamily_plugin.util import load_families
-from clldutils.path import Path, git_describe
 from clldutils.jsonlib import load
 from pyclts import CLTS
 from pyclts.models import Sound
 from nameparser import HumanName
-from cldfcatalog import Repository
-from cldfzenodo.oai import iter_records
+from clld_ipachart_plugin.util import load_inventories
 
 import lexibank
 from lexibank.models import LexibankLanguage, Concept, LexibankDataset, Form
 
-CLICS_LIST = pathlib.Path('/home/robert/projects/concepticon/concepticon-cldf/raw/'
-                          'concepticon-data/concepticondata/conceptlists/Rzymski-2020-1624.tsv')
+PROJECTS_DIR = pathlib.Path('/home/robert/projects')
+CLTS_DIR = PROJECTS_DIR / 'cldf-clts' / 'clts-data'
+CLICS4_DIR = PROJECTS_DIR / 'clics' / 'clics4'
+GLOTTOLOG_DIR = PROJECTS_DIR / 'glottolog' / 'glottolog'
 
 
 def iter_rows(db, table, query, params=None):
     with db.connection() as conn:
         cu = conn.cursor()
-        cu.execute('select * from  {} limit 1'.format(table))
+        cu.execute(f'select * from  {table} limit 1')
         cols = [r[0] for r in cu.description]
 
     for row in db.query(query, params or ()):
@@ -36,13 +36,15 @@ def iter_rows(db, table, query, params=None):
 
 
 def main(args):
-    bipa = CLTS(pathlib.Path('/home/robert/projects/cldf-clts/clts-data')).bipa
+    bipa = CLTS(CLTS_DIR).bipa
+    clics4 = Dataset.from_metadata(CLICS4_DIR / 'cldf' / 'Wordlist-metadata.json')
+    cluster = {
+        c['Concepticon_ID']: c['CentralConcept']
+        for c in clics4.iter_rows('ParameterTable') if c['CentralConcept']}
 
     cldf = args.cldf
     db = Database(cldf, fname=cldf.directory / '..' / 'lexibank.sqlite')
-    clusters = {row['CONCEPTICON_ID']: row for row in reader(CLICS_LIST, delimiter='\t', dicts=True)}
 
-    zenodo = {rec.doi: rec for rec in iter_records('lexibank')}
     c2con = {}
 
     with transaction.manager:
@@ -61,39 +63,42 @@ def main(args):
                 'license_name': 'Creative Commons Attribution 4.0 International License'})
         DBSession.add(dataset)
 
-        for i, name in enumerate([
-            'Johann-Mattis List',
-            'Robert Forkel',
-            'Simon J. Greenhill',
-            'Christoph Rzymski',
-            'Johannes Englisch',
-            'Russell D. Gray',
-        ], start=1):
+        zenodo = load(cldf.directory / '..' / '.zenodo.json')
+        for i, name in enumerate((c['name'] for c in zenodo['creators']), start=1):
             n = HumanName(name)
             c = data.add(common.Contributor, n.last, id=n.last, name=name)
             DBSession.add(common.Editor(contributor=c, dataset=dataset, ord=i))
 
+
         contribs = {
-            row['Source']: row for row in reader(
-                cldf.directory / '..' / 'etc' / 'lexibank-bliss.tsv', delimiter='\t', dicts=True)
+            #ID,Name,Description,Contributor,Citation,Collection_IDs,Glottocodes,Doculects,Concepts,Senses,Forms,Source
+            row['ID']: row for row in reader(cldf.directory / 'contributions.csv', dicts=True)
         }
-        for c in contribs.values():
-            assert c['Zenodo'] in zenodo, 'DOI: {}'.format(c)
-            assert zenodo[c['Zenodo']].version == c['Version'], 'Version: {}'.format(c)
-            c['Title'] = zenodo[c['Zenodo']].title
+        for cid, c in contribs.items():
+            src = cldf.sources[cid]
+            c['dataset_source'] = src
+            try:
+                src['doi']
+            except KeyError:
+                args.log.warning('Not a proper dataset source: %s', src.id)
+                #raise
+            #for sid in c['Source'].split(';'):
+            #    assert cldf.sources[sid]
+            #assert c['Zenodo'] in zenodo, 'DOI: {}'.format(c)
+            #assert zenodo[c['Zenodo']].version == c['Version'], 'Version: {}'.format(c)
+            #c['Title'] = zenodo[c['Zenodo']].title
 
         profiles = collections.defaultdict(dict)
 
         for row in db.query("select distinct sourcetable_id from formtable_sourcetable"):
-            contrib = contribs[row[0]]
+            contrib = contribs[row[0].lower()]
             d = cldf.directory / '..' / 'raw' / contrib['ID']
             assert d.exists()
-            assert contrib['Version'] == git_describe(d), '{} {} {}'.format(contrib['ID'], contrib['Version'], git_describe(d))
 
             for p in d.joinpath('etc').glob('orthography'):
                 if p.is_dir():
                     for pp in p.glob('*.tsv'):
-                        profiles[row[0]][pp.stem] = '{}/{}'.format(p.name, pp.name)
+                        profiles[row[0]][pp.stem] = f'{p.name}/{pp.name}'
             global_profile = d / 'etc' / 'orthography.tsv'
             if global_profile.exists():
                 profiles[row[0]][None] = global_profile.name
@@ -105,15 +110,17 @@ def main(args):
                 src.genre = EntryType.misc
             source = data.add(common.Source, row[0], _obj=bibtex2source(src))
             md = load(d / 'metadata.json')
+            conceptlist = md.get('conceptlist', [])
             data.add(
                 LexibankDataset, row[0],
                 id=contrib['ID'],
-                name=contrib['Title'],
-                url=Repository(d).url,
-                version=contrib['Version'],
-                doi=contrib['Zenodo'],
+                name=contrib['Name'],
+                url=f"https://doi.org/{src.get('doi')}",
+                # FIXME: where do we get this info from?
+                #version=contrib['Version'],
+                doi=src.get('doi'),
                 source=source,
-                jsondata=dict(conceptlists=[md['conceptlist']] if isinstance(md['conceptlist'], str) else md['conceptlist']),
+                jsondata=dict(conceptlists=[conceptlist] if isinstance(conceptlist, str) else conceptlist),
             )
 
         l2ds = {
@@ -137,25 +144,25 @@ def main(args):
 
         for row in cldf.iter_rows('ParameterTable'):
             c2con[row['ID']] = row['Concepticon_ID']
-            cluster = clusters.get(row['Concepticon_ID'])
+            cc = cluster.get(row['Concepticon_ID'])
             data.add(
                 Concept, row['ID'],
                 id=row['Concepticon_ID'],
                 name=row['Name'],
-                cluster_id=cluster['COMMUNITY'] if cluster else None,
-                central_concept=(cluster['CENTRAL_CONCEPT'] or None) if cluster else None)
+                cluster_id=cc,
+                central_concept=cc,
+            )
 
         DBSession.flush()
         for key in data:
             data[key] = {k: v.pk for k, v in data[key].items()}
 
-    segments = collections.defaultdict(collections.Counter)
     sounds = {}
     concepts = collections.defaultdict(lambda: dict(nwords=0, datasets=set(), languages=set()))
     for src in data['Source']:
         with transaction.manager:
             vss = Data()
-            print('{} ...'.format(src))
+            print(f'{src} ...')
             dscids, dsnwords = set(), 0
             for nlangs, (lid, rows) in enumerate(itertools.groupby(
                 iter_rows(
@@ -193,7 +200,6 @@ def main(args):
                         sound = bipa[s]
                         if isinstance(sound, Sound):
                             sounds[s] = sound.name
-                            segments[lid].update([str(sound)])
                     DBSession.add(Form(
                         id=row['cldf_id'],
                         name=row['cldf_form'],
@@ -221,18 +227,15 @@ def main(args):
             c.ndatasets = len(data['datasets'])
             c.nlangs = len(data['languages'])
 
-        for lid, segs in segments.items():
-            common.Language.get(lid).jsondata = dict(inventory=segs)
-
-        glottolog_repos = Path(
-            lexibank.__file__).parent.parent.parent.parent.joinpath('glottolog', 'glottolog')
         load_families(
             Data(),
             [(l.glottocode, l) for l in DBSession.query(LexibankLanguage)],
-            glottolog_repos=glottolog_repos,
+            glottolog_repos=GLOTTOLOG_DIR,
             strict=False,
             isolates_icon='tcccccc')
         DBSession.add(common.Config(key='bipa_mapping', jsondata=sounds))
+
+        load_inventories(db, CLTS(CLTS_DIR), {l.id: l for l in DBSession.query(LexibankLanguage)})
 
 
 def prime_cache(args):

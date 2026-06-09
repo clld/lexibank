@@ -36,14 +36,17 @@
         <a href="${req.route_url('contributions')}">${stats['contribution']} <em>Lexibank datasets</em></a>.</li>
 </ul>
 
-<h3>How to cite Lexibank</h3>
+<h3>How to cite Lexibank 2</h3>
 <p>Please cite the Lexibank paper</p>
 <blockquote>
     List, JM., Forkel, R., Greenhill, S.J. et al. Lexibank, a public repository of standardized wordlists with computed phonological and lexical features. Sci Data 9, 316 (2022). <a href="https://doi.org/10.1038/s41597-022-01432-0">DOI: 10.1038/s41597-022-01432-0</a>
 </blockquote>
-<p>as well as the underlying dataset</p>
+<p>as well as the underlying dataset for version 2</p>
 <blockquote>
-    Johann-Mattis List, Robert Forkel, Simon J. Greenhill, Christoph Rzymski, Johannes Englisch, & Russell D. Gray. (2023). Lexibank Analysed [Data set]. In Scientific Data (v1.0, Vol. 9, Number 316, pp. 1–31). Zenodo. <a href="https://doi.org/10.5281/zenodo.7836668">DOI: 10.5281/zenodo.7836668</a>
+    Frederic Blum, Carlos Barrientos, Johannes Englisch, Robert Forkel, Russell D. Gray, Simon J. Greenhill, Christoph Rzymski, & Johann-Mattis List. (2025). Lexibank Analysed (v2.1) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.15194559
 </blockquote>
-
-
+<p>and its description</p>
+<blockquote>
+    Blum, Frederic, Carlos Barrientos, Johannes Englisch, Robert Forkel, Simon J. Greenhill, Christoph Rzymski & Johann-Mattis List. 2025a. Lexibank 2: pre-computed features for large-scale lexical data. Open Research Europe 5(126). 1–27.
+    <a href="https://doi.org/10.12688/openreseurope.20216.2">https://doi.org/10.12688/openreseurope.20216.2</a>.
+</blockquote>

@@ -61,6 +61,8 @@ ${util.codes()}
             ${request.get_datatable('values', h.models.Value, language=ctx).render()}
         </div>
         <div id="ipa" class="tab-pane">
+            <p>Segments are color-coded by frequency in the wordlist:</p>
+            ${frequency_legend|n}
 
             <h4>Consonants</h4>
             ${consonants_html.replace('&lt;sup&gt;', '<sup>').replace('&lt;/sup&gt;', '</sup>')|n}

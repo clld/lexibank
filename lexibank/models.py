@@ -1,5 +1,3 @@
-import urllib.parse
-
 from zope.interface import implementer
 from sqlalchemy import (
     Column,
@@ -10,9 +8,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from clld import interfaces
-from clld.db.meta import Base, CustomModelMixin
+from clld.db.meta import CustomModelMixin
 from clld.db.models.common import Language, Parameter, Contribution, Value, HasSourceMixin
 from clld_glottologfamily_plugin.models import HasFamilyMixin
+from clld_ipachart_plugin.models import InventoryMixin
 
 
 @implementer(interfaces.IContribution)
@@ -33,6 +32,9 @@ class LexibankDataset(CustomModelMixin, Contribution, HasSourceMixin):
 @implementer(interfaces.IParameter)
 class Concept(CustomModelMixin, Parameter):
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
+    #
+    # FIXME: Add links to CLICS4!
+    #
     cluster_id = Column(Unicode)
     central_concept = Column(Unicode)
 
@@ -47,12 +49,11 @@ class Concept(CustomModelMixin, Parameter):
     @property
     def clics_url(self):
         if self.cluster_id:
-            return 'https://clics.clld.org/graphs/infomap_{}_{}'.format(
-                self.cluster_id, urllib.parse.quote(self.central_concept))
+            return f'https://clics.clld.org/graphs/{self.cluster_id}'
 
 
 @implementer(interfaces.ILanguage)
-class LexibankLanguage(CustomModelMixin, Language, HasFamilyMixin):
+class LexibankLanguage(CustomModelMixin, Language, HasFamilyMixin, InventoryMixin):
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
     glottocode = Column(Unicode)
     contribution_pk = Column(Integer, ForeignKey('contribution.pk'))

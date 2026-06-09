@@ -1,6 +1,7 @@
 import math
 
 from sqlalchemy.orm import joinedload
+from matplotlib import colormaps, colors
 from clld import RESOURCES
 from clld.db.meta import DBSession
 from clld.db.models.common import Language, Config
@@ -12,12 +13,7 @@ from clld.web.util.helpers import link
 from lexibank.models import LexibankLanguage
 from lexibank.maps import DatasetLanguagesMap
 
-
 assert glottolog and concepticon
-#
-# FIXME:
-#  CLICS-link
-#
 
 
 def concepticon_link(request, concept, label=None):
@@ -45,10 +41,10 @@ def dataset_provenance(req, contribution, with_conceptlists=False):
     dl = [
         HTML.dt('Zenodo:'),
         HTML.dd(HTML.a(contribution.doi, href="https://doi.org/{}".format(contribution.doi))),
-        HTML.dt('GitHub:'),
-        HTML.dd(HTML.a('/'.join(contribution.url.split('/')[-2:]),
-                       href="{}/tree/{}".format(contribution.url, contribution.version)),
-                literal('&nbsp;[' + contribution.version + ']')),
+        #HTML.dt('GitHub:'),
+        #HTML.dd(HTML.a('/'.join(contribution.url.split('/')[-2:]),
+        #               href="{}/tree/{}".format(contribution.url, contribution.version)),
+        #        literal('&nbsp;[' + str(contribution.version) + ']')),
         HTML.dt('Source:'),
         HTML.dd(HTML.blockquote(contribution.source.bibtex().text()))
     ]
@@ -73,35 +69,41 @@ def contribution_detail_html(context=None, request=None, **kw):
 
 
 def language_detail_html(context=None, request=None, **kw):
-    from pyclts.ipachart import VowelTrapezoid, PulmonicConsonants, Segment
-
     def color(freq, maxfreq):
-        hexnum = hex(math.floor(128 - freq / maxfreq * 127)).upper().replace('0X', '')
-        return 'c' + hexnum, '#{0}{0}{0}'.format(hexnum)
+        hexnum = colors.to_hex(colormaps['viridis'](1 - (freq / float(2*maxfreq) + 0.5)))
+        return 'c' + hexnum[1:], hexnum
 
     colorspec = {}
-    maxfreq = max(context.jsondata['inventory'].values())
-    for freq in context.jsondata['inventory'].values():
+    css_class = {}
+    maxfreq = max(context.jsondata['frequencies'].values())
+    for c, freq in context.jsondata['frequencies'].items():
         cls, col = color(freq, maxfreq)
         colorspec[cls] = (col, None)
+        css_class[c] = cls
 
     bipa = DBSession.query(Config).filter(Config.key=='bipa_mapping').one().jsondata
-    inventory = [
-        Segment(
-            sound_bipa=v,
-            sound_name=bipa[v],
-            href='https://clts.clld.org/parameters/{}'.format(bipa[v].replace(' ', '_')),
-            css_class=color(freq, maxfreq)[0],
-        ) for v, freq in context.jsondata['inventory'].items()]
 
-    res = {}
-    d = VowelTrapezoid()
-    covered = d.fill_slots(inventory)
-    res['vowels_html'], res['vowels_css'] = d.render(colorspec=colorspec)
-    d = PulmonicConsonants()
-    covered = covered.union(d.fill_slots(inventory))
-    res['consonants_html'], res['consonants_css'] = d.render(colorspec=colorspec)
-    res['uncovered'] = [p for i, p in enumerate(inventory) if i not in covered]
+    def customize_segment(segment):
+        if segment.sound_bipa in bipa:
+            segment.sound_name = bipa[segment.sound_bipa]
+            segment.css_class = css_class[segment.sound_bipa]
+        return segment
+
+    res = context.render_inventory(request=request, render_kw=dict(colorspec=colorspec), customize_segment=customize_segment)
+
+    labels, colors_, lower = [], [], 0
+    for i in range(1, 11):
+        upper = math.ceil(i * 0.1 * maxfreq)
+        labels.append(HTML.literal(f'{lower if lower == 0 else '&nbsp;&nbsp;'}-{upper}'))
+        colors_.append(color(lower + (upper - lower) / 2.0, maxfreq)[1])
+        lower = upper + 1
+
+    res['frequency_legend'] = HTML.table(
+        HTML.body(
+            HTML.tr(*[HTML.td(label) for label in labels]),
+            HTML.tr(*[HTML.td(HTML.literal('&nbsp;'), style=f'background-color: {c}') for c in colors_]),
+        )
+    )
     return res
 
 
