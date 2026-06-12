@@ -17,8 +17,10 @@ from clld_ipachart_plugin.models import InventoryMixin
 @implementer(interfaces.IContribution)
 class LexibankDataset(CustomModelMixin, Contribution, HasSourceMixin):
     pk = Column(Integer, ForeignKey('contribution.pk'), primary_key=True)
+
     url = Column(Unicode)
     version = Column(Unicode)
+
     doi = Column(Unicode)
 
     nconcepts = Column(Integer)

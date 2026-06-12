@@ -44,7 +44,6 @@ def main(args):
 
     cldf = args.cldf
     db = Database(cldf, fname=cldf.directory / '..' / 'lexibank.sqlite')
-
     c2con = {}
 
     with transaction.manager:
@@ -77,16 +76,8 @@ def main(args):
         for cid, c in contribs.items():
             src = cldf.sources[cid]
             c['dataset_source'] = src
-            try:
-                src['doi']
-            except KeyError:
-                args.log.warning('Not a proper dataset source: %s', src.id)
-                #raise
-            #for sid in c['Source'].split(';'):
-            #    assert cldf.sources[sid]
-            #assert c['Zenodo'] in zenodo, 'DOI: {}'.format(c)
-            #assert zenodo[c['Zenodo']].version == c['Version'], 'Version: {}'.format(c)
-            #c['Title'] = zenodo[c['Zenodo']].title
+            assert src['doi'] and src['github']
+            assert 'zenodo' in src['doi'], src['doi']
 
         profiles = collections.defaultdict(dict)
 
@@ -111,13 +102,13 @@ def main(args):
             source = data.add(common.Source, row[0], _obj=bibtex2source(src))
             md = load(d / 'metadata.json')
             conceptlist = md.get('conceptlist', [])
+            url, _, version = src['github'].partition('/tree/')
             data.add(
                 LexibankDataset, row[0],
                 id=contrib['ID'],
                 name=contrib['Name'],
-                url=f"https://doi.org/{src.get('doi')}",
-                # FIXME: where do we get this info from?
-                #version=contrib['Version'],
+                url=url,
+                version=version,
                 doi=src.get('doi'),
                 source=source,
                 jsondata=dict(conceptlists=[conceptlist] if isinstance(conceptlist, str) else conceptlist),

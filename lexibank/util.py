@@ -41,10 +41,10 @@ def dataset_provenance(req, contribution, with_conceptlists=False):
     dl = [
         HTML.dt('Zenodo:'),
         HTML.dd(HTML.a(contribution.doi, href="https://doi.org/{}".format(contribution.doi))),
-        #HTML.dt('GitHub:'),
-        #HTML.dd(HTML.a('/'.join(contribution.url.split('/')[-2:]),
-        #               href="{}/tree/{}".format(contribution.url, contribution.version)),
-        #        literal('&nbsp;[' + str(contribution.version) + ']')),
+        HTML.dt('GitHub:'),
+        HTML.dd(HTML.a('/'.join(contribution.url.split('/')[-3:-1]),
+                       href="{}/tree/{}".format(contribution.url, contribution.version)),
+                literal('&nbsp;[' + str(contribution.version) + ']')),
         HTML.dt('Source:'),
         HTML.dd(HTML.blockquote(contribution.source.bibtex().text()))
     ]
