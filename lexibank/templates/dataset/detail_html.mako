@@ -43,7 +43,7 @@
 </blockquote>
 <p>as well as the underlying dataset for version 2</p>
 <blockquote>
-    Frederic Blum, Carlos Barrientos, Johannes Englisch, Robert Forkel, Russell D. Gray, Simon J. Greenhill, Christoph Rzymski, & Johann-Mattis List. (2025). Lexibank Analysed (v2.1) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.15194559
+    Frederic Blum, Carlos Barrientos, Johannes Englisch, Robert Forkel, Simon J. Greenhill, Christoph Rzymski, & Johann-Mattis List. (2026). Lexibank 2: pre-computed features for large-scale lexical data (v2.2) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.20712996
 </blockquote>
 <p>and its description</p>
 <blockquote>
