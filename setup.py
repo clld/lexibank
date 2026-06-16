@@ -22,7 +22,7 @@ setup(
     install_requires=[
         'clldutils>=4',
         'pyclts>=4.0.2',
-        'clld>=10',
+        'clld>=11.5',
         'clldmpg>=4.2',
         'clld-glottologfamily-plugin>=2.0.1',
         'clld-ipachart-plugin>=1.0',
