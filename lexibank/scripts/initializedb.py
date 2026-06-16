@@ -38,9 +38,16 @@ def iter_rows(db, table, query, params=None):
 def main(args):
     bipa = CLTS(CLTS_DIR).bipa
     clics4 = Dataset.from_metadata(CLICS4_DIR / 'cldf' / 'Wordlist-metadata.json')
-    cluster = {
-        c['Concepticon_ID']: c['CentralConcept']
-        for c in clics4.iter_rows('ParameterTable') if c['CentralConcept']}
+    cluster = collections.defaultdict(list)
+    for c in clics4.iter_rows('ParameterTable'):
+        if c['CentralConcept']:
+            cluster[c['CentralConcept']].append(c['Concepticon_ID'])
+    rcluster = {}
+    for cc, cids in cluster.items():
+        if len(cids) > 1:
+            for cid in cids:
+                rcluster[cid] = cc
+    cluster = rcluster
 
     cldf = args.cldf
     db = Database(cldf, fname=cldf.directory / '..' / 'lexibank.sqlite')
