@@ -29,7 +29,7 @@
     % endif
     <dt>Segments:</dt>
     % if ctx.profile:
-    <dd>Orthography profile: <a href="${ctx.valueset.contribution.profile_url(ctx.profile)}">${ctx.profile}</a></dd>
+    <dd>Orthography profile <a href="https://langsci-press.org/catalog/book/176">${h.icon('question-sign')}</a>: <a href="${ctx.valueset.contribution.profile_url(ctx.profile)}">${ctx.profile}</a></dd>
     % endif
     <dd>
 <table class="table table-nonfluid table-condensed">

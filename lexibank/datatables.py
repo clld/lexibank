@@ -75,14 +75,14 @@ class Words(Values):
             ]
 
         if self.contribution:
+            lpks = DBSession.query(ValueSet.language_pk).filter(ValueSet.contribution_pk==self.contribution.pk)
             famcol.choices = sorted(
                 {
-                    (vs.language.family.id, vs.language.family.name) for vs in
-                    DBSession.query(ValueSet)
-                    .join(ValueSet.language)
+                    (language.family.id, language.family.name) for language in
+                    DBSession.query(LexibankLanguage)
                     .join(LexibankLanguage.family)
-                    .filter(ValueSet.contribution==self.contribution)
-                    .options(joinedload(ValueSet.language).joinedload(LexibankLanguage.family))},
+                    .filter(LexibankLanguage.pk.in_(lpks))
+                    .options(joinedload(LexibankLanguage.family))},
                 key=lambda i: i[1])
             return [
                 LinkCol(self, 'form', model_col=Form.name),
@@ -161,6 +161,7 @@ class LexibankLanguages(Languages):
         return [
             LanguageIdCol(self, 'id'),
             LinkCol(self, 'name'),
+            Col(self, 'glottocode', model_col=LexibankLanguage.glottocode),
             LinkToMapCol(self, 'm'),
             Col(self,
                 'latitude',

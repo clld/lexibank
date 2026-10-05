@@ -34,9 +34,6 @@ class LexibankDataset(CustomModelMixin, Contribution, HasSourceMixin):
 @implementer(interfaces.IParameter)
 class Concept(CustomModelMixin, Parameter):
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
-    #
-    # FIXME: Add links to CLICS4!
-    #
     cluster_id = Column(Unicode)
     central_concept = Column(Unicode)
 
