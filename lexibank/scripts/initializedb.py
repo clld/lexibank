@@ -1,6 +1,8 @@
+import os
 import pathlib
 import itertools
 import collections
+import urllib.parse
 
 import transaction
 from pycldf import Database, Dataset
@@ -19,11 +21,6 @@ from clld_ipachart_plugin.util import load_inventories
 import lexibank
 from lexibank.models import LexibankLanguage, Concept, LexibankDataset, Form
 
-PROJECTS_DIR = pathlib.Path('/home/robert/projects')
-CLTS_DIR = PROJECTS_DIR / 'cldf-clts' / 'clts-data'
-CLICS4_DIR = PROJECTS_DIR / 'clics' / 'clics4'
-GLOTTOLOG_DIR = PROJECTS_DIR / 'glottolog' / 'glottolog'
-
 
 def iter_rows(db, table, query, params=None):
     with db.connection() as conn:
@@ -36,8 +33,11 @@ def iter_rows(db, table, query, params=None):
 
 
 def main(args):
-    bipa = CLTS(CLTS_DIR).bipa
-    clics4 = Dataset.from_metadata(CLICS4_DIR / 'cldf' / 'Wordlist-metadata.json')
+    assert args.glottolog
+    project_dir = args.cldf.directory / '..' / '..'
+
+    bipa = CLTS(project_dir / 'clts-data').bipa
+    clics4 = Dataset.from_metadata(project_dir / 'clics4' / 'cldf' / 'Wordlist-metadata.json')
     cluster = collections.defaultdict(list)
     for c in clics4.iter_rows('ParameterTable'):
         if c['CentralConcept']:
@@ -80,18 +80,29 @@ def main(args):
             #ID,Name,Description,Contributor,Citation,Collection_IDs,Glottocodes,Doculects,Concepts,Senses,Forms,Source
             row['ID']: row for row in reader(cldf.directory / 'contributions.csv', dicts=True)
         }
+        assert 'barlowkilliantomoip' in contribs
         for cid, c in contribs.items():
             src = cldf.sources[cid]
             c['dataset_source'] = src
             assert src['doi'] and src['github']
             assert 'zenodo' in src['doi'], src['doi']
 
-        profiles = collections.defaultdict(dict)
+            comps = urllib.parse.urlparse(src['github']).path.split('/')
+            assert comps[-2] == 'tree'
+            dl_dir = project_dir / 'lexibank-analysed' / 'raw' / cid
+            if not dl_dir.exists():
+                os.system(f'gh release download {comps[-1]} -A zip -R {comps[1]}/{comps[2]} -D {dl_dir}')
+                os.system(f'unzip {dl_dir}/*.zip -d {dl_dir}')
+                os.system(f'rm {dl_dir}/*.zip')
 
+        profiles = collections.defaultdict(dict)
         for row in db.query("select distinct sourcetable_id from formtable_sourcetable"):
             contrib = contribs[row[0].lower()]
             d = cldf.directory / '..' / 'raw' / contrib['ID']
-            assert d.exists()
+            assert d.exists(), d
+            subdirs = [dd for dd in d.iterdir() if dd.is_dir()]
+            assert len(subdirs) == 1
+            d = subdirs[0]
 
             for p in d.joinpath('etc').glob('orthography'):
                 if p.is_dir():
@@ -189,11 +200,13 @@ def main(args):
                             parameter_pk=data['Concept'][cid],
                             contribution_pk=data['LexibankDataset'][src],
                         )
+
                     profile = None
                     if lid.split('-')[1] in profiles[src]:
                         profile = profiles[src][lid.split('-')[1]]
                     elif None in profiles[src]:
                         profile = profiles[src][None]
+
                     for s in row['cldf_segments'].split():
                         sound = bipa[s]
                         if isinstance(sound, Sound):
@@ -228,13 +241,13 @@ def main(args):
         load_families(
             Data(),
             [(l.glottocode, l) for l in DBSession.query(LexibankLanguage)],
-            glottolog_repos=GLOTTOLOG_DIR,
+            glottolog_repos=args.glottolog,
             strict=False,
             isolates_icon='tcccccc')
         DBSession.add(common.Config(key='bipa_mapping', jsondata=sounds))
-
-        load_inventories(db, CLTS(CLTS_DIR), {l.id: l for l in DBSession.query(LexibankLanguage)})
+        load_inventories(db, CLTS(project_dir / 'clts-data'), {l.id: l for l in DBSession.query(LexibankLanguage)})
 
 
 def prime_cache(args):
     pass
+
